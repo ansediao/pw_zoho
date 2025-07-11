@@ -230,6 +230,8 @@
                         .filter(item => item.status === '已完成' || item.status === '进行中')
                         .map(item => item.theme_name);
 
+                        console.log(filteredThemes);
+
                     // 移除重复项
                     const uniqueThemes = [...new Set(filteredThemes)];
 
