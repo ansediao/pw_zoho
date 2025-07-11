@@ -227,6 +227,7 @@
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
                     console.log('Response Data:', response.data);
+                    console.log('Full Response Data Structure:', JSON.stringify(response.data, null, 2));
                     const filteredThemes = response.data.map(item => {
                         if (item && item.theme_name) {
                             return item.theme_name;
