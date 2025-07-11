@@ -58,15 +58,7 @@
             margin-bottom: -1px;
         }
 
-        .main-nav-btn.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background-color: #3b82f6;
-        }
+     
 
         /* 子导航栏样式 */
         .sub-nav {
