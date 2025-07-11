@@ -303,7 +303,44 @@
                                 menu.style.padding = '5px';
                                 menu.style.zIndex = '1000';
                                 menu.innerHTML = `
-                                    <button onclick="this.parentNode.remove();"><a href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">添加子节点</a></button>
+                                    <div style="padding-bottom: 5px;">
+                                        <select id="nodeTypeSelect">
+                                            <option value="purpose">目的</option>
+const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
+                                const nextButton = menu.querySelector('#nextButton');
+
+                                function updateNextButtonHref() {
+                                    const selectedValue = nodeTypeSelect.value;
+                                    let newHref = "https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:";
+                                    switch (selectedValue) {
+                                        case "purpose":
+                                            newHref += "form2"; // 假设目的对应 form2
+                                            break;
+                                        case "plan":
+                                            newHref += "form24"; // 假设计划对应 form3
+                                            break;
+                                        case "plan_node":
+                                            newHref += "Quarterly_Fighting_Topics1"; // 假设计划节点对应 form4
+                                            break;
+                                        default:
+                                            newHref += "form2"; // 默认值
+                                    }
+                                    newHref += "?zc_LoadIn=dialog";
+                                    nextButton.href = newHref;
+                                }
+
+                                // 初始设置 href
+                                updateNextButtonHref();
+
+                                // 添加事件监听器
+                                nodeTypeSelect.addEventListener('change', updateNextButtonHref);
+                                            <option value="plan">计划</option>
+                                            <option value="plan_node">计划节点</option>
+                                        </select>
+                                    </div>
+                                    <button onclick="this.parentNode.remove();">
+                                        <a id="nextButton" href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">下一步</a>
+                                    </button>
                                 `;
                                 document.body.appendChild(menu);
 
