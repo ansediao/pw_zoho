@@ -154,7 +154,14 @@
             <button class="main-nav-btn">执行与任务</button>
             <button class="main-nav-btn active">协同与管理</button>
         </div>
-        <button><a href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top">添加子节点</a></button>
+        <button><a href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top">qqq</a></button>
+        <button>
+  <a
+    href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:demo?zc_LoadIn=dialog"
+    target="_top"
+    >Add</a
+  >
+</button>
         <div>
             <!-- 子导航栏 -->
             <div id="subNav" class="sub-nav">
