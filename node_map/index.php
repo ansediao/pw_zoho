@@ -226,9 +226,15 @@
 
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
-                    const filteredThemes = response.data.map(item => item.theme_name);
+                    console.log('Response Data:', response.data);
+                    const filteredThemes = response.data.map(item => {
+                        if (item && item.theme_name) {
+                            return item.theme_name;
+                        }
+                        return undefined;
+                    }).filter(theme => theme !== undefined);
 
-                        console.log(filteredThemes);
+                    console.log('Filtered Themes:', filteredThemes);
 
                     // 移除重复项
                     const uniqueThemes = [...new Set(filteredThemes)];
