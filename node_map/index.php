@@ -182,6 +182,10 @@
                 </label>
             </div>
         </div>
+        <!-- 网络图区域 -->
+        <div id="networkGraphContainer" style="width: 100%; height: 500px; border: 1px solid #ccc; margin-top: 2rem; display: none;">
+            <!-- 网络图将在此处渲染 -->
+        </div>
     </div>
 
     <script>
@@ -230,6 +234,17 @@
                     const filteredThemes = response.data
                         .filter(item => item.status === '已完成' || item.status === '进行中')
                         .map(item => item.theme_name);
+
+                    // 添加 themeSelect 的 change 事件监听器
+                    themeSelect.addEventListener('change', function() {
+                        if (this.value) {
+                            networkGraphContainer.style.display = 'block'; // 显示网络图区域
+                            // 这里可以添加初始化网络图的代码，例如：
+                            // initNetworkGraph(this.value);
+                        } else {
+                            networkGraphContainer.style.display = 'none'; // 隐藏网络图区域
+                        }
+                    });
 
                     console.log('Filtered Themes:', filteredThemes);
 
