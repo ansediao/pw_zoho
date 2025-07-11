@@ -219,7 +219,7 @@
 
                 const config = {
                     app_name: '-demo', // 替换为你的应用名称
-                    report_name: 'form23_Report', // 替换为你的报表名称
+                    report_name: 'Quarterly_Fighting_Topics_Report', // 替换为你的报表名称
                 };
                 const response = await ZOHO.CREATOR.DATA.getRecords(config);
                 console.log('Zoho Creator Data:', response);
