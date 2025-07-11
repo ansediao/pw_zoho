@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>界面示例1</title>
     <script src="https://js.zohostatic.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
+    <!-- 引入 Vis.js 库 -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
         /* 基本样式和布局 */
         body {
@@ -239,12 +241,55 @@
                     themeSelect.addEventListener('change', function() {
                         if (this.value) {
                             networkGraphContainer.style.display = 'block'; // 显示网络图区域
-                            // 这里可以添加初始化网络图的代码，例如：
-                            // initNetworkGraph(this.value);
+                            initNetworkGraph(this.value); // 初始化网络图
                         } else {
                             networkGraphContainer.style.display = 'none'; // 隐藏网络图区域
                         }
                     });
+
+                    // 初始化网络图函数
+                    function initNetworkGraph(selectedTheme) {
+                        const container = document.getElementById('networkGraphContainer');
+                        const nodes = new vis.DataSet([]);
+                        const edges = new vis.DataSet([]);
+
+                        // 添加选定的主题作为节点
+                        nodes.add({ id: selectedTheme, label: selectedTheme, color: '#6aa84f' });
+
+                        const data = {
+                            nodes: nodes,
+                            edges: edges
+                        };
+
+                        const options = {
+                            nodes: {
+                                shape: 'box',
+                                size: 20,
+                                font: {
+                                    size: 14,
+                                    color: '#ffffff'
+                                },
+                                borderWidth: 2,
+                                shadow: true
+                            },
+                            edges: {
+                                width: 2,
+                                shadow: true
+                            },
+                            physics: {
+                                enabled: true,
+                                stabilization: {
+                                    iterations: 2000
+                                }
+                            },
+                            interaction: {
+                                navigationButtons: true,
+                                keyboard: true
+                            }
+                        };
+
+                        const network = new vis.Network(container, data, options);
+                    }
 
                     console.log('Filtered Themes:', filteredThemes);
 
