@@ -215,7 +215,9 @@
         // Zoho Creator 数据获取和填充下拉菜单
         window.addEventListener('load', async function () {
             try {
+                // 确保 Zoho Creator SDK 已初始化
                 await ZOHO.CREATOR.init();
+
                 const config = {
                     app_name: '-demo', // 替换为你的应用名称
                     report_name: 'form23_Report', // 替换为你的报表名称
