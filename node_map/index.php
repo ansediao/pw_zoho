@@ -304,7 +304,7 @@
                                 menu.style.padding = '5px';
                                 menu.style.zIndex = '1000';
                                 menu.innerHTML = `
-                                    <a href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">添加子节点</a>
+                                    <button><a href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">添加子节点</a></button>
                                 `;
                                 document.body.appendChild(menu);
 
