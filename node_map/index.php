@@ -289,6 +289,34 @@
                         };
 
                         const network = new vis.Network(container, data, options);
+
+                        network.on("oncontext", function (params) {
+                            params.event.preventDefault(); // 阻止默认的浏览器右键菜单
+                            const nodeId = network.getNodeAt(params.pointer.DOM);
+                            if (nodeId) {
+                                // 如果点击的是节点，显示自定义菜单
+                                const menu = document.createElement('div');
+                                menu.style.position = 'absolute';
+                                menu.style.top = `${params.event.clientY}px`;
+                                menu.style.left = `${params.event.clientX}px`;
+                                menu.style.backgroundColor = 'white';
+                                menu.style.border = '1px solid #ccc';
+                                menu.style.padding = '5px';
+                                menu.style.zIndex = '1000';
+                                menu.innerHTML = `
+                                    <a href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">添加子节点</a>
+                                `;
+                                document.body.appendChild(menu);
+
+                                // 点击菜单外部时隐藏菜单
+                                document.addEventListener('click', function hideMenu(event) {
+                                    if (!menu.contains(event.target)) {
+                                        menu.remove();
+                                        document.removeEventListener('click', hideMenu);
+                                    }
+                                });
+                            }
+                        });
                     }
 
                     console.log('Filtered Themes:', filteredThemes);
