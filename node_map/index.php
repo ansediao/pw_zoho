@@ -14,7 +14,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #f7fafc;
             margin: 0;
-           
+
             min-height: 100vh;
         }
 
@@ -59,7 +59,7 @@
             margin-bottom: -1px;
         }
 
-     
+
 
         /* 子导航栏样式 */
         .sub-nav {
@@ -153,7 +153,7 @@
             <button class="main-nav-btn">战况与风险111</button>
             <button class="main-nav-btn">执行与任务</button>
             <button class="main-nav-btn active">协同与管理</button>
-        </div>      
+        </div>
         <div>
             <!-- 子导航栏 -->
             <div id="subNav" class="sub-nav">
@@ -190,6 +190,28 @@
     </div>
 
     <script>
+        // 全局函数定义
+        function updateNextButtonHref() {
+            const selectedValue = nodeTypeSelect.value;
+            let newHref = "https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:";
+            switch (selectedValue) {
+                case "purpose":
+                    newHref += "form2"; // 假设目的对应 form2
+                    break;
+                case "plan":
+                    newHref += "form24"; // 假设计划对应 form3
+                    break;
+                case "plan_node":
+                    newHref += "Quarterly_Fighting_Topics1"; // 假设计划节点对应 form4
+                    break;
+                default:
+                    newHref += "form2"; // 默认值
+            }
+            newHref += "?zc_LoadIn=dialog";
+            nextButton.href = newHref;
+        }
+
+
         // 用于处理导航按钮活动状态的 JavaScript
         const mainNav = document.getElementById('mainNav');
         const subNav = document.getElementById('subNav');
@@ -218,9 +240,9 @@
         subNav.addEventListener('click', (e) => handleNavClick(e, '.sub-nav-btn'));
 
         // Zoho Creator 数据获取和填充下拉菜单
-        window.addEventListener('load', async function () {
+        window.addEventListener('load', async function() {
             try {
-                
+
 
                 const config = {
                     app_name: '-demo', // 替换为你的应用名称
@@ -231,7 +253,7 @@
 
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
-                   
+
                     const filteredThemes = response.data
                         .filter(item => item.status === '已完成' || item.status === '进行中')
                         .map(item => item.theme_name);
@@ -253,7 +275,11 @@
                         const edges = new vis.DataSet([]);
 
                         // 添加选定的主题作为节点
-                        nodes.add({ id: selectedTheme, label: selectedTheme, color: '#6aa84f' });
+                        nodes.add({
+                            id: selectedTheme,
+                            label: selectedTheme,
+                            color: '#6aa84f'
+                        });
 
                         const data = {
                             nodes: nodes,
@@ -289,7 +315,7 @@
 
                         const network = new vis.Network(container, data, options);
 
-                        network.on("oncontext", function (params) {
+                        network.on("oncontext", function(params) {
                             params.event.preventDefault(); // 阻止默认的浏览器右键菜单
                             const nodeId = network.getNodeAt(params.pointer.DOM);
                             if (nodeId) {
@@ -305,35 +331,7 @@
                                 menu.innerHTML = `
                                     <div style="padding-bottom: 5px;">
                                         <select id="nodeTypeSelect">
-                                            <option value="purpose">目的</option>
-const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
-                                const nextButton = menu.querySelector('#nextButton');
-
-                                function updateNextButtonHref() {
-                                    const selectedValue = nodeTypeSelect.value;
-                                    let newHref = "https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:";
-                                    switch (selectedValue) {
-                                        case "purpose":
-                                            newHref += "form2"; // 假设目的对应 form2
-                                            break;
-                                        case "plan":
-                                            newHref += "form24"; // 假设计划对应 form3
-                                            break;
-                                        case "plan_node":
-                                            newHref += "Quarterly_Fighting_Topics1"; // 假设计划节点对应 form4
-                                            break;
-                                        default:
-                                            newHref += "form2"; // 默认值
-                                    }
-                                    newHref += "?zc_LoadIn=dialog";
-                                    nextButton.href = newHref;
-                                }
-
-                                // 初始设置 href
-                                updateNextButtonHref();
-
-                                // 添加事件监听器
-                                nodeTypeSelect.addEventListener('change', updateNextButtonHref);
+                                            <option value="purpose">目的</option>                               
                                             <option value="plan">计划</option>
                                             <option value="plan_node">计划节点</option>
                                         </select>
@@ -343,6 +341,16 @@ const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
                                     </button>
                                 `;
                                 document.body.appendChild(menu);
+
+                                // 获取动态创建的元素并添加事件监听器
+                                const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
+                                const nextButton = menu.querySelector('#nextButton');
+
+                                // 初始设置 href
+                                updateNextButtonHref();
+
+                                // 添加事件监听器
+                                nodeTypeSelect.addEventListener('change', updateNextButtonHref);
 
                                 // 点击菜单外部时隐藏菜单
                                 document.addEventListener('click', function hideMenu(event) {
