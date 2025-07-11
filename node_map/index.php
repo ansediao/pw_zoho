@@ -226,14 +226,13 @@
 
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
-                    console.log('Response Data:', response.data);
-                    console.log('Full Response Data Structure:', JSON.stringify(response.data, null, 2));
+                   
                     const filteredThemes = response.data.map(item => {
                         if (item && item.theme_name) {
                             return item.theme_name;
                         }
                         return undefined;
-                    }).filter(theme => theme !== undefined);
+                    }).filter(item => item.status === '已完成' || item.status === '进行中');
 
                     console.log('Filtered Themes:', filteredThemes);
 
