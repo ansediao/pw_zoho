@@ -226,9 +226,7 @@
 
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
-                    const filteredThemes = response.data
-                        .filter(item => item.status === '已完成' || item.status === '进行中')
-                        .map(item => item.theme_name);
+                    const filteredThemes = response.data.map(item => item.theme_name);
 
                         console.log(filteredThemes);
 
