@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>界面示例</title>
+    <script src="https://js.zohostatic.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
     <style>
         /* 基本样式和布局 */
         body {
@@ -164,10 +165,8 @@
         <div class="filters">
             <!-- 下拉菜单 -->
             <div>
-                <select>
-                    <option>核心目标</option>
-                    <option>目标 A</option>
-                    <option>目标 B</option>
+                <select id="themeSelect">
+                    <option value="">核心目标</option>
                 </select>
             </div>
 
@@ -212,6 +211,40 @@
         // 为导航容器添加事件监听器
         mainNav.addEventListener('click', (e) => handleNavClick(e, '.main-nav-btn'));
         subNav.addEventListener('click', (e) => handleNavClick(e, '.sub-nav-btn'));
+
+        // Zoho Creator 数据获取和填充下拉菜单
+        window.addEventListener('load', async function () {
+            try {
+                await ZOHO.CREATOR.init();
+                const config = {
+                    app_name: '-demo', // 替换为你的应用名称
+                    report_name: 'form23_Report', // 替换为你的报表名称
+                };
+                const response = await ZOHO.CREATOR.DATA.getRecords(config);
+                console.log('Zoho Creator Data:', response);
+
+                if (response.code === 3000 && response.data) {
+                    const themeSelect = document.getElementById('themeSelect');
+                    const filteredThemes = response.data
+                        .filter(item => item.status === '已完成' || item.status === '进行中')
+                        .map(item => item.theme_name);
+
+                    // 移除重复项
+                    const uniqueThemes = [...new Set(filteredThemes)];
+
+                    uniqueThemes.forEach(theme => {
+                        const option = document.createElement('option');
+                        option.value = theme;
+                        option.textContent = theme;
+                        themeSelect.appendChild(option);
+                    });
+                } else {
+                    console.error('从 Zoho Creator 获取数据失败:', response);
+                }
+            } catch (error) {
+                console.error('初始化 Zoho Creator 或获取数据时出错:', error);
+            }
+        });
     </script>
 </body>
 
