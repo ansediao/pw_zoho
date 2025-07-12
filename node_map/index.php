@@ -249,7 +249,63 @@
                     report_name: 'Quarterly_Fighting_Topics_Report', // 替换为你的报表名称
                 };
                 const response = await ZOHO.CREATOR.DATA.getRecords(config);
-                console.log('Zoho Creator Data:', response);
+                // console.log('Zoho Creator Data:', response);
+
+                // --- 配置区 ---
+                const app_name = '-demo'; // 替换为你的应用名称
+
+                // 定义所有需要获取数据的报表名称
+                const report_names = [
+                    'Goals_Report',
+                    'Plans_Report',
+                    'Plan_Nodes_Report'
+                ];
+
+                // --- 执行区 ---
+                async function fetchAllData() {
+                    console.log('开始并行获取所有报表数据...');
+
+                    try {
+                        // 1. 创建一个包含所有请求的 Promise 数组
+                        // .map 会遍历 report_names 数组，并为每个报表名称返回一个 getRecords 的 Promise
+                        const promises = report_names.map(report_name => {
+                            const config = {
+                                app_name: app_name,
+                                report_name: report_name,
+                            };
+                            return ZOHO.CREATOR.DATA.getRecords(config);
+                        });
+
+                        // 2. 使用 Promise.all 来并行执行所有的 Promise
+                        // 它会等待所有的请求都成功完成后，才继续执行
+                        const results = await Promise.all(promises);
+                        console.log('所有数据已成功获取!');
+
+                        // 3. 将返回的结果组装到一个对象中，方便使用
+                        const allData = {};
+                        report_names.forEach((name, index) => {
+                            // results 数组中的顺序与 report_names 中的顺序是一致的
+                            // 我们将每个报表的数据存入 allData 对象，以报表名为键 (key)
+                            allData[name] = results[index].data || [];
+                        });
+
+                        // 4. 打印最终组装好的数据对象
+                        console.log('所有数据已组装完毕:', allData);
+
+                        // 现在您可以通过 allData.Goals_Report, allData.Plans_Report 等方式来访问具体的数据了
+                        // 例如:
+                        // console.log('Goals 数据:', allData.Goals_Report);
+
+                        return allData;
+
+                    } catch (error) {
+                        // 如果任何一个请求失败，Promise.all 就会立即抛出错误
+                        console.error('在获取数据过程中发生错误:', error);
+                    }
+                }
+
+                // 调用主函数来执行
+                fetchAllData();
 
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
