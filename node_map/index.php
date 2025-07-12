@@ -196,16 +196,16 @@
             let newHref = "https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:";
             switch (selectedValue) {
                 case "purpose":
-                    newHref += "form2"; // 假设目的对应 form2
+                    newHref += "Goals"; // 假设目的对应 form2
                     break;
                 case "plan":
-                    newHref += "form24"; // 假设计划对应 form3
+                    newHref += "Plans"; // 假设计划对应 form3
                     break;
                 case "plan_node":
-                    newHref += "Quarterly_Fighting_Topics1"; // 假设计划节点对应 form4
+                    newHref += "Plan_Nodes"; // 假设计划节点对应 form4
                     break;
                 default:
-                    newHref += "form2"; // 默认值
+                    newHref += "Goals"; // 默认值
             }
             newHref += "?zc_LoadIn=dialog";
             nextButton.href = newHref;
