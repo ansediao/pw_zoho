@@ -256,9 +256,8 @@
 
                 // 定义所有需要获取数据的报表名称
                 const report_names = [
-                    'Goals_Report',
-                    'Plans_Report',
-                    'Plan_Nodes_Report'
+                    'Goals_Report'
+
                 ];
 
                 // --- 执行区 ---
