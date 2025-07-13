@@ -521,18 +521,23 @@
                         const rowHeight = 100;   // 行间距
                         
                         levels.forEach((levelNodes, level) => {
-                            // 计算垂直居中偏移
-                            const totalHeight = (levelNodes.length - 1) * rowHeight;
-                            const startY = -totalHeight / 2;
-                            
                             levelNodes.forEach((node, index) => {
+                                let yPosition;
+                                if (level === 0) {
+                                    // 根节点固定在第一行 (y = 0)
+                                    yPosition = 0;
+                                } else {
+                                    // 其他层级从上往下排列，早的在上面
+                                    yPosition = index * rowHeight;
+                                }
+                                
                                 visNodes.push({
                                     id: node.id,
                                     label: truncateText(node.name, 16),
                                     title: `${node.name}\n创建时间: ${node.create_time}\n类型: ${node.original.Node_Type || ''}\n状态: ${node.original.status || ''}`,
                                     level: level,
                                     x: level * columnWidth, // X坐标按层级 (列)
-                                    y: startY + index * rowHeight, // Y坐标按create_time排序 (行，早的在上面)
+                                    y: yPosition, // Y坐标：根节点在第一行，其他按create_time排序
                                     fixed: { x: true, y: true }, // 固定位置
                                     color: getNodeColor(level),
                                     font: { size: 14, color: '#333' },
