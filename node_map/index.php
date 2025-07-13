@@ -382,13 +382,66 @@
                         }
                     });
 
-                    // 初始化网络图函数
+                    // 解析自定义日期格式 (13-Jul-2025 01:55:33)
+                    function parseCustomDate(dateStr) {
+                        if (!dateStr) return new Date('1970-01-01');
+                        
+                        try {
+                            // 月份映射
+                            const monthMap = {
+                                'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                                'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                                'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                            };
+                            
+                            // 解析格式: 13-Jul-2025 01:55:33
+                            const parts = dateStr.split(' ');
+                            if (parts.length !== 2) return new Date(dateStr);
+                            
+                            const datePart = parts[0]; // 13-Jul-2025
+                            const timePart = parts[1]; // 01:55:33
+                            
+                            const dateComponents = datePart.split('-');
+                            if (dateComponents.length !== 3) return new Date(dateStr);
+                            
+                            const day = dateComponents[0].padStart(2, '0');
+                            const month = monthMap[dateComponents[1]] || '01';
+                            const year = dateComponents[2];
+                            
+                            // 构建标准格式: YYYY-MM-DD HH:mm:ss
+                            const standardFormat = `${year}-${month}-${day} ${timePart}`;
+                            return new Date(standardFormat);
+                        } catch (error) {
+                            console.warn('日期解析失败:', dateStr, error);
+                            return new Date('1970-01-01');
+                        }
+                    }
+
+                    // 文字截断函数
+                    function truncateText(text, maxLength) {
+                        if (!text) return '';
+                        if (text.length <= maxLength) return text;
+                        return text.substring(0, maxLength) + '...';
+                    }
+
+                    // 获取节点颜色
+                    function getNodeColor(level) {
+                        const colors = [
+                            { border: '#e74c3c', background: '#fadbd8' }, // 红色 - 第1层 (根节点)
+                            { border: '#3498db', background: '#d6eaf8' }, // 蓝色 - 第2层 (直接子节点)
+                            { border: '#2ecc71', background: '#d5f4e6' }, // 绿色 - 第3层
+                        ];
+
+                        return colors[Math.min(level, colors.length - 1)];
+                    }
+
+                    // 初始化网络图函数 - 使用行列布局
                     function initNetworkGraph(selectedTheme) {
                         const container = document.getElementById('networkGraphContainer');
                         const nodes = new vis.DataSet([]);
                         const edges = new vis.DataSet([]);
 
-                        // 获取 Joint_Report 数据（异步函数外部无法直接拿到 fetchAllData 的返回值，这里用 window.allData 作为全局变量存储）
+                        // 获取 Joint_Report 数据
                         const jointReport = window.allData && window.allData['Joint_Report'] ? window.allData['Joint_Report'] : [];
 
                         // 1. 找到根节点（主题）
@@ -401,77 +454,166 @@
                         }
                         console.log(`🔍 找到 ${rootNodes.length} 个根节点:`, rootNodes);
 
-                        // 2. 递归绘制所有节点及其子节点
-                        function drawNodeAndChildren(item, nodeColor = '#6aa84f', parentId = null) {
+                        // 2. 构建层级数据结构
+                        const allNodes = [];
+                        const nodeMap = new Map();
+
+                        // 收集所有节点数据
+                        function collectNodes(item, level = 0, parentId = null) {
                             const nodeId = item.ID || `node_${Math.random().toString(36).slice(2)}`;
-                            const nodeLabel = item.objective_name || item.plan_name || item.name || item.title || item.theme_name || `节点`;
-                            // 避免重复添加节点
-                            if (!nodes.get(nodeId)) {
-                                nodes.add({
-                                    id: nodeId,
-                                    label: nodeLabel,
-                                    color: nodeColor,
-                                    title: `ID: ${nodeId}\n类型: ${item.Node_Type || ''}\n主题: ${item.theme_name || ''}\n状态: ${item.status || ''}`
-                                });
-                            }
-                            if (parentId) {
-                                edges.add({from: parentId, to: nodeId, arrows: 'to'});
-                            }
-                            // 查找 Joint_Report 中 Father_Node_ID 等于当前节点 ID 的子节点
+                            const nodeData = {
+                                id: nodeId,
+                                name: item.objective_name || item.plan_name || item.name || item.title || item.theme_name || `节点`,
+                                father_id: parentId,
+                                create_time: item.Create_Time || item.created_time || item.date_created || '01-Jan-1970 00:00:00',
+                                level: level,
+                                original: item
+                            };
+                            
+                            allNodes.push(nodeData);
+                            nodeMap.set(nodeId, nodeData);
+
+                            // 查找子节点
                             const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
                             children.forEach(child => {
-                                drawNodeAndChildren(child, '#3b82f6', nodeId);
+                                collectNodes(child, level + 1, nodeId);
                             });
                         }
 
-                        rootNodes.forEach((item) => {
-                            drawNodeAndChildren(item, '#6aa84f', null);
+                        // 从根节点开始收集
+                        rootNodes.forEach(item => collectNodes(item, 0, null));
+
+                        // 如果没有根节点，创建默认节点
+                        if (rootNodes.length === 0) {
+                            allNodes.push({
+                                id: selectedTheme,
+                                name: selectedTheme,
+                                father_id: null,
+                                create_time: '01-Jan-1970 00:00:00',
+                                level: 0,
+                                original: { theme_name: selectedTheme }
+                            });
+                        }
+
+                        // 3. 按层级组织节点并排序
+                        const levels = new Map();
+                        const maxLevels = 3;
+
+                        allNodes.forEach(node => {
+                            if (node.level < maxLevels) {
+                                if (!levels.has(node.level)) levels.set(node.level, []);
+                                levels.get(node.level).push(node);
+                            }
                         });
 
-                        // 如果没有根节点，创建一个默认节点
-                        if (rootNodes.length === 0) {
-                            nodes.add({
-                                id: selectedTheme,
-                                label: selectedTheme,
-                                color: '#6aa84f',
-                                title: '默认主题节点'
+                        // 对每层的节点按创建时间排序
+                        levels.forEach(levelNodes => {
+                            levelNodes.sort((a, b) => {
+                                const timeA = parseCustomDate(a.create_time);
+                                const timeB = parseCustomDate(b.create_time);
+                                return timeA - timeB; // 早的在前面
                             });
-                            console.log(`📊 创建默认节点: ${selectedTheme}`);
-                        }
+                        });
+
+                        // 4. 创建vis节点 - 行列布局
+                        const visNodes = [];
+                        const columnWidth = 300; // 列间距
+                        const rowHeight = 100;   // 行间距
+                        
+                        levels.forEach((levelNodes, level) => {
+                            // 计算垂直居中偏移
+                            const totalHeight = (levelNodes.length - 1) * rowHeight;
+                            const startY = -totalHeight / 2;
+                            
+                            levelNodes.forEach((node, index) => {
+                                visNodes.push({
+                                    id: node.id,
+                                    label: truncateText(node.name, 16),
+                                    title: `${node.name}\n创建时间: ${node.create_time}\n类型: ${node.original.Node_Type || ''}\n状态: ${node.original.status || ''}`,
+                                    level: level,
+                                    x: level * columnWidth, // X坐标按层级 (列)
+                                    y: startY + index * rowHeight, // Y坐标按create_time排序 (行，早的在上面)
+                                    fixed: { x: true, y: true }, // 固定位置
+                                    color: getNodeColor(level),
+                                    font: { size: 14, color: '#333' },
+                                    borderWidth: 2,
+                                    margin: 10,
+                                    widthConstraint: { minimum: 150, maximum: 200 },
+                                    heightConstraint: { minimum: 50 },
+                                });
+                            });
+                        });
+
+                        // 5. 创建vis边
+                        const visEdges = [];
+                        levels.forEach(levelNodes => {
+                            levelNodes.forEach(node => {
+                                if (node.father_id !== null && nodeMap.has(node.father_id)) {
+                                    const parentInView = visNodes.some(vn => vn.id === node.father_id);
+                                    if (parentInView) {
+                                        visEdges.push({
+                                            from: node.father_id,
+                                            to: node.id,
+                                            arrows: { to: { enabled: true, scaleFactor: 1 } },
+                                            color: '#7f8c8d',
+                                            width: 2,
+                                        });
+                                    }
+                                }
+                            });
+                        });
+
+                        // 6. 添加到网络
+                        nodes.add(visNodes);
+                        edges.add(visEdges);
+
+                        console.log(`📊 网络图数据: ${visNodes.length} 个节点, ${visEdges.length} 条边 (按创建时间排序)`)
 
                         const data = {
                             nodes: nodes,
                             edges: edges
                         };
 
+                        // 7. 网络配置 - 禁用物理引擎，使用固定布局
                         const options = {
+                            layout: {
+                                hierarchical: {
+                                    enabled: false,
+                                },
+                            },
+                            physics: { enabled: false }, // 禁用物理引擎
                             nodes: {
                                 shape: 'box',
-                                size: 20,
-                                font: {
-                                    size: 14,
-                                    color: '#ffffff'
-                                },
+                                margin: 10,
+                                font: { size: 14, color: '#333' },
                                 borderWidth: 2,
+                                widthConstraint: { minimum: 150 },
+                                heightConstraint: { minimum: 40 },
                                 shadow: true
                             },
                             edges: {
+                                arrows: { to: { enabled: true, scaleFactor: 1 } },
+                                color: '#7f8c8d',
                                 width: 2,
                                 shadow: true
                             },
-                            physics: {
-                                enabled: true,
-                                stabilization: {
-                                    iterations: 2000
-                                }
-                            },
                             interaction: {
+                                dragNodes: true,
+                                dragView: true,
+                                zoomView: true,
                                 navigationButtons: true,
                                 keyboard: true
                             }
                         };
 
                         const network = new vis.Network(container, data, options);
+
+                        // 适应视图
+                        setTimeout(() => {
+                            if (network) {
+                                network.fit();
+                            }
+                        }, 200);
 
                         network.on("oncontext", function(params) {
                             params.event.preventDefault(); // 阻止默认的浏览器右键菜单
