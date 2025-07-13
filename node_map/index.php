@@ -266,50 +266,73 @@
                     console.log('开始并行获取所有报表数据...');
 
                     try {
-                        // 1. 创建一个包含所有请求的 Promise 数组
+                        // 1. 创建一个包含所有请求的 Promise 数组，并添加错误处理
                         // .map 会遍历 report_names 数组，并为每个报表名称返回一个 getRecords 的 Promise
-                        const promises = report_names.map(report_name => {
-                            const config = {
-                                app_name: app_name,
-                                report_name: report_name,
-                            };
-                            return ZOHO.CREATOR.DATA.getRecords(config);
+                        const promises = report_names.map(async (report_name) => {
+                            try {
+                                const config = {
+                                    app_name: app_name,
+                                    report_name: report_name,
+                                };
+                                const result = await ZOHO.CREATOR.DATA.getRecords(config);
+                                return { success: true, data: result, reportName: report_name };
+                            } catch (error) {
+                                // 处理特定的错误情况
+                                if (error.responseText) {
+                                    try {
+                                        const errorData = JSON.parse(error.responseText);
+                                        if (errorData.code === 9220) {
+                                            // 报表无记录的情况，这是正常的
+                                            console.log(`📋 报表 ${report_name} 暂无记录`);
+                                            return { success: true, data: { data: [] }, reportName: report_name };
+                                        }
+                                    } catch (parseError) {
+                                        console.warn(`解析错误响应失败:`, parseError);
+                                    }
+                                }
+                                // 其他错误情况
+                                console.error(`❌ 获取报表 ${report_name} 数据失败:`, error);
+                                return { success: false, error: error, reportName: report_name };
+                            }
                         });
 
                         // 2. 使用 Promise.all 来并行执行所有的 Promise
-                        // 它会等待所有的请求都成功完成后，才继续执行
+                        // 现在所有 Promise 都会成功完成，不会因为单个报表无记录而中断
                         const results = await Promise.all(promises);
                         console.log('所有数据已成功获取!');
 
                         // 3. 将返回的结果组装到一个对象中，方便使用
                         const allData = {};
-                        report_names.forEach((name, index) => {
-                            // results 数组中的顺序与 report_names 中的顺序是一致的
-                            // 我们将每个报表的数据存入 allData 对象，以报表名为键 (key)
-                            
-                            // 报表数据存入对象之前先判断是否为空
-                            const result = results[index];
+                        results.forEach((result, index) => {
+                            const reportName = report_names[index];
                             let reportData = [];
                             
-                            // 检查结果对象是否存在且有效
-                            if (result && typeof result === 'object') {
-                                // 检查 data 属性是否存在且为数组
-                                if (result.data && Array.isArray(result.data)) {
-                                    reportData = result.data;
-                                    console.log(`报表 ${name} 数据有效，包含 ${reportData.length} 条记录`);
-                                } else if (result.data) {
-                                    // 如果 data 存在但不是数组，尝试转换
-                                    console.warn(`报表 ${name} 的数据不是数组格式，尝试转换:`, result.data);
-                                    reportData = Array.isArray(result.data) ? result.data : [result.data];
+                            // 报表数据存入对象之前先判断是否为空
+                            if (result.success) {
+                                // 请求成功的情况
+                                const apiResult = result.data;
+                                if (apiResult && typeof apiResult === 'object') {
+                                    // 检查 data 属性是否存在且为数组
+                                    if (apiResult.data && Array.isArray(apiResult.data)) {
+                                        reportData = apiResult.data;
+                                        console.log(`✅ 报表 ${reportName} 数据有效，包含 ${reportData.length} 条记录`);
+                                    } else if (apiResult.data) {
+                                        // 如果 data 存在但不是数组，尝试转换
+                                        console.warn(`⚠️ 报表 ${reportName} 的数据不是数组格式，尝试转换:`, apiResult.data);
+                                        reportData = Array.isArray(apiResult.data) ? apiResult.data : [apiResult.data];
+                                    } else {
+                                        console.log(`ℹ️ 报表 ${reportName} 暂无数据`);
+                                    }
                                 } else {
-                                    console.warn(`报表 ${name} 的 data 属性为空或不存在`);
+                                    console.warn(`⚠️ 报表 ${reportName} 的结果对象无效:`, apiResult);
                                 }
                             } else {
-                                console.warn(`报表 ${name} 的结果对象无效:`, result);
+                                // 请求失败的情况
+                                console.error(`❌ 报表 ${reportName} 获取失败，使用空数组`);
                             }
                             
                             // 最终赋值，确保始终是数组
-                            allData[name] = reportData;
+                            allData[reportName] = reportData;
                         });
 
                         // 4. 打印最终组装好的数据对象
@@ -322,8 +345,16 @@
                         return allData;
 
                     } catch (error) {
-                        // 如果任何一个请求失败，Promise.all 就会立即抛出错误
-                        console.error('在获取数据过程中发生错误:', error);
+                        // 处理意外的系统错误
+                        console.error('❌ 系统错误 - 在获取数据过程中发生意外错误:', error);
+                        
+                        // 返回空的数据对象，确保程序能继续运行
+                        const emptyData = {};
+                        report_names.forEach(name => {
+                            emptyData[name] = [];
+                        });
+                        console.log('🔄 已返回空数据对象，程序继续运行');
+                        return emptyData;
                     }
                 }
 
