@@ -445,6 +445,55 @@
                         return typeColors[nodeType] || typeColors['default'];
                     }
 
+                    // 下钻功能 - 以指定节点为根节点重新绘制图表
+                    function drillDownToNode(nodeId) {
+                        console.log(`🔍 下钻到节点: ${nodeId}`);
+                        
+                        // 获取 Joint_Report 数据
+                        const jointReport = window.allData && window.allData['Joint_Report'] ? window.allData['Joint_Report'] : [];
+                        
+                        // 获取所有后代节点
+                        function getAllDescendants(parentId, data) {
+                            const children = data.filter(item => item.Father_Node_ID == parentId);
+                            let descendants = [...children];
+                            
+                            children.forEach(child => {
+                                descendants = descendants.concat(getAllDescendants(child.ID, data));
+                            });
+                            
+                            return descendants;
+                        }
+                        
+                        // 找到目标节点
+                        const targetNode = jointReport.find(item => item.ID == nodeId);
+                        if (!targetNode) {
+                            console.error(`找不到节点 ${nodeId}`);
+                            return;
+                        }
+                        
+                        // 获取所有后代节点
+                        const descendants = getAllDescendants(nodeId, jointReport);
+                        
+                        // 创建新的数据集，以目标节点为根
+                        const drillData = [
+                            { ...targetNode, Father_Node_ID: "" }, // 目标节点变为根节点
+                            ...descendants
+                        ];
+                        
+                        console.log(`📊 下钻数据: ${drillData.length} 个节点`, drillData);
+                        
+                        // 临时保存原始数据并替换
+                        const originalJointReport = window.allData['Joint_Report'];
+                        window.allData['Joint_Report'] = drillData;
+                        
+                        // 重新初始化网络图
+                        const selectedTheme = document.getElementById('themeSelect').value;
+                        initNetworkGraph(selectedTheme);
+                        
+                        // 恢复原始数据（可选，如果需要返回功能）
+                        // window.allData['Joint_Report'] = originalJointReport;
+                    }
+
                     // 初始化网络图函数 - 使用行列布局
                     function initNetworkGraph(selectedTheme) {
                         const container = document.getElementById('networkGraphContainer');
@@ -571,6 +620,7 @@
 
                         // 3. 按层级组织节点并排序
                         const levels = new Map();
+                        // 限制层级
                         const maxLevels = 3;
 
                         allNodes.forEach(node => {
@@ -779,6 +829,25 @@
                                     return;
                                 }
                                 
+                                // 检查是否有子节点
+                                const hasChildren = jointReport.some(child => child.Father_Node_ID == nodeId);
+                                
+                                // 检查是否为根节点
+                                const isRootNode = currentNode && (currentNode.level === 0 || !currentNode.father_id);
+                                
+                                // 构建菜单内容
+                                let menuContent = '';
+                                
+                                // 如果不是根节点且有子节点，显示下钻按钮
+                                if (!isRootNode && hasChildren) {
+                                    menuContent += `
+                                        <div style="padding: 5px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="drillDownToNode('${nodeId}'); this.parentNode.parentNode.remove();">
+                                            🔍 下钻查看
+                                        </div>
+                                    `;
+                                }
+                                
+                                // 添加原有的选择功能
                                 // 根据节点类型构建选项
                                 let selectOptions = `
                                     <option value="purpose">目的</option>                               
@@ -790,16 +859,7 @@
                                     selectOptions = `<option value="plan_node">计划节点</option>`;
                                 }
                                 
-                                // 如果点击的是节点，显示自定义菜单
-                                const menu = document.createElement('div');
-                                menu.style.position = 'absolute';
-                                menu.style.top = `${params.event.clientY}px`;
-                                menu.style.left = `${params.event.clientX}px`;
-                                menu.style.backgroundColor = 'white';
-                                menu.style.border = '1px solid #ccc';
-                                menu.style.padding = '5px';
-                                menu.style.zIndex = '1000';
-                                menu.innerHTML = `
+                                menuContent += `
                                     <div style="padding-bottom: 5px;">
                                         <select id="nodeTypeSelect">
                                             ${selectOptions}
@@ -809,6 +869,17 @@
                                         <a id="nextButton" href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">下一步</a>
                                     </button>
                                 `;
+                                
+                                // 如果点击的是节点，显示自定义菜单
+                                const menu = document.createElement('div');
+                                menu.style.position = 'absolute';
+                                menu.style.top = `${params.event.clientY}px`;
+                                menu.style.left = `${params.event.clientX}px`;
+                                menu.style.backgroundColor = 'white';
+                                menu.style.border = '1px solid #ccc';
+                                menu.style.padding = '5px';
+                                menu.style.zIndex = '1000';
+                                menu.innerHTML = menuContent;
                                 document.body.appendChild(menu);
 
                                 // 获取动态创建的元素并添加事件监听器
