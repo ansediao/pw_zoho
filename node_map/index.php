@@ -498,13 +498,24 @@
 
                         // 1. 找到根节点（主题）
                         let rootNodes = [];
+                        
+                        // 首先尝试从 response.data 中查找根节点
                         if (response.data && Array.isArray(response.data)) {
                             rootNodes = response.data.filter(item => {
                                 return item && item.theme_name === selectedTheme && 
                                        (item.status === '已完成' || item.status === '进行中');
                             });
                         }
-                        console.log(`🔍 找到 ${rootNodes.length} 个根节点:`, rootNodes);
+                        
+                        // 如果没有找到根节点，从 jointReport 中查找没有父节点的节点作为根节点
+                        if (rootNodes.length === 0 && jointReport.length > 0) {
+                            rootNodes = jointReport.filter(item => {
+                                return !item.Father_Node_ID || item.Father_Node_ID === "";
+                            });
+                            console.log(`🔍 从 jointReport 中找到 ${rootNodes.length} 个根节点:`, rootNodes);
+                        } else {
+                            console.log(`🔍 从 response.data 中找到 ${rootNodes.length} 个根节点:`, rootNodes);
+                        }
 
                         // 2. 构建层级数据结构
                         const allNodes = [];
