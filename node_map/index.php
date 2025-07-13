@@ -263,123 +263,72 @@
 
                 // --- 执行区 ---
                 async function fetchAllData() {
-                    console.log('开始并行获取所有报表数据...');
-
-                    try {
-                        // 1. 创建一个包含所有请求的 Promise 数组，并添加错误处理
-                        // .map 会遍历 report_names 数组，并为每个报表名称返回一个 getRecords 的 Promise
-                        const promises = report_names.map(async (report_name) => {
-                            try {
-                                const config = {
-                                    app_name: app_name,
-                                    report_name: report_name,
-                                };
-                                const result = await ZOHO.CREATOR.DATA.getRecords(config);
-                                return { success: true, data: result, reportName: report_name };
-                            } catch (error) {
-                                // 添加详细的错误调试信息
-                                console.log(`🔍 调试 - 报表 ${report_name} 错误详情:`, error);
-                                console.log(`🔍 错误类型:`, typeof error);
-                                console.log(`🔍 错误属性:`, Object.keys(error));
-                                
-                                // 处理特定的错误情况
-                                let isNoRecordsError = false;
-                                
-                                // 检查多种可能的错误格式
-                                if (error.responseText) {
-                                    try {
-                                        const errorData = JSON.parse(error.responseText);
-                                        console.log(`🔍 解析的错误数据:`, errorData);
-                                        if (errorData.code === 9220) {
-                                            isNoRecordsError = true;
-                                        }
-                                    } catch (parseError) {
-                                        console.warn(`解析错误响应失败:`, parseError);
-                                    }
-                                }
-                                
-                                // 检查错误消息中是否包含"No records exist"
-                                if (error.message && error.message.includes('No records exist')) {
-                                    isNoRecordsError = true;
-                                }
-                                
-                                // 检查状态码
-                                if (error.status === 400 && error.statusText === 'error') {
-                                    isNoRecordsError = true;
-                                }
-                                
-                                if (isNoRecordsError) {
-                                    // 报表无记录的情况，这是正常的
-                                    console.log(`📋 报表 ${report_name} 暂无记录 (已处理)`);
-                                    return { success: true, data: { data: [] }, reportName: report_name };
-                                }
-                                
-                                // 其他错误情况
-                                console.error(`❌ 获取报表 ${report_name} 数据失败:`, error);
-                                return { success: false, error: error, reportName: report_name };
-                            }
-                        });
-
-                        // 2. 使用 Promise.all 来并行执行所有的 Promise
-                        // 现在所有 Promise 都会成功完成，不会因为单个报表无记录而中断
-                        const results = await Promise.all(promises);
-                        console.log('所有数据已成功获取!');
-
-                        // 3. 将返回的结果组装到一个对象中，方便使用
-                        const allData = {};
-                        results.forEach((result, index) => {
-                            const reportName = report_names[index];
-                            let reportData = [];
+                    console.log('开始逐个获取报表数据...');
+                    
+                    const allData = {};
+                    
+                    // 逐个获取每个报表的数据
+                    for (let i = 0; i < report_names.length; i++) {
+                        const report_name = report_names[i];
+                        console.log(`📊 正在获取报表: ${report_name} (${i + 1}/${report_names.length})`);
+                        
+                        try {
+                            const config = {
+                                app_name: app_name,
+                                report_name: report_name,
+                            };
+                            
+                            const result = await ZOHO.CREATOR.DATA.getRecords(config);
                             
                             // 报表数据存入对象之前先判断是否为空
-                            if (result.success) {
-                                // 请求成功的情况
-                                const apiResult = result.data;
-                                if (apiResult && typeof apiResult === 'object') {
-                                    // 检查 data 属性是否存在且为数组
-                                    if (apiResult.data && Array.isArray(apiResult.data)) {
-                                        reportData = apiResult.data;
-                                        console.log(`✅ 报表 ${reportName} 数据有效，包含 ${reportData.length} 条记录`);
-                                    } else if (apiResult.data) {
-                                        // 如果 data 存在但不是数组，尝试转换
-                                        console.warn(`⚠️ 报表 ${reportName} 的数据不是数组格式，尝试转换:`, apiResult.data);
-                                        reportData = Array.isArray(apiResult.data) ? apiResult.data : [apiResult.data];
-                                    } else {
-                                        console.log(`ℹ️ 报表 ${reportName} 暂无数据`);
-                                    }
+                            let reportData = [];
+                            if (result && typeof result === 'object') {
+                                if (result.data && Array.isArray(result.data)) {
+                                    reportData = result.data;
+                                    console.log(`✅ 报表 ${report_name} 数据有效，包含 ${reportData.length} 条记录`);
+                                } else if (result.data) {
+                                    // 如果 data 存在但不是数组，尝试转换
+                                    console.warn(`⚠️ 报表 ${report_name} 的数据不是数组格式，尝试转换:`, result.data);
+                                    reportData = Array.isArray(result.data) ? result.data : [result.data];
                                 } else {
-                                    console.warn(`⚠️ 报表 ${reportName} 的结果对象无效:`, apiResult);
+                                    console.log(`ℹ️ 报表 ${report_name} 暂无数据`);
                                 }
                             } else {
-                                // 请求失败的情况
-                                console.error(`❌ 报表 ${reportName} 获取失败，使用空数组`);
+                                console.warn(`⚠️ 报表 ${report_name} 的结果对象无效:`, result);
                             }
                             
-                            // 最终赋值，确保始终是数组
-                            allData[reportName] = reportData;
-                        });
-
-                        // 4. 打印最终组装好的数据对象
-                        console.log('所有数据已组装完毕:', allData);
-
-                        // 现在您可以通过 allData.Goals_Report, allData.Plans_Report 等方式来访问具体的数据了
-                        // 例如:
-                        // console.log('Goals 数据:', allData.Goals_Report);
-
-                        return allData;
-
-                    } catch (error) {
-                        // 处理意外的系统错误
-                        console.error('❌ 系统错误 - 在获取数据过程中发生意外错误:', error);
-                        
-                        // 返回空的数据对象，确保程序能继续运行
-                        const emptyData = {};
-                        report_names.forEach(name => {
-                            emptyData[name] = [];
-                        });
-                        console.log('🔄 已返回空数据对象，程序继续运行');
-                        return emptyData;
+                            // 存入数据对象
+                            allData[report_name] = reportData;
+                            
+                        } catch (error) {
+                            console.log(`🔍 报表 ${report_name} 获取出错:`, error);
+                            
+                            // 检查是否是"无记录"错误
+                            let isNoRecordsError = false;
+                            
+                            if (error.responseText) {
+                                try {
+                                    const errorData = JSON.parse(error.responseText);
+                                    if (errorData.code === 9220) {
+                                        isNoRecordsError = true;
+                                    }
+                                } catch (parseError) {
+                                    // 解析失败，继续其他检查
+                                }
+                            }
+                            
+                            if (isNoRecordsError) {
+                                console.log(`📋 报表 ${report_name} 暂无记录，设置为空数组`);
+                                allData[report_name] = [];
+                            } else {
+                                console.error(`❌ 报表 ${report_name} 获取失败，设置为空数组:`, error);
+                                allData[report_name] = [];
+                            }
+                        }
                     }
+                    
+                    console.log('📦 所有报表数据获取完毕:', allData);
+                    return allData;
                 }
 
                 // 调用主函数来执行
