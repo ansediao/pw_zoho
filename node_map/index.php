@@ -404,7 +404,7 @@
                         // 2. 绘制根节点及其子节点
                         rootNodes.forEach((item, index) => {
                             const nodeId = item.ID || `node_${index}`;
-                            const nodeLabel = item.objective_name || `节点 ${index + 1}`;
+                            const nodeLabel = item.objective_name || item.plan_name|| `节点 ${index + 1}`;
                             nodes.add({
                                 id: nodeId,
                                 label: nodeLabel,
@@ -415,7 +415,7 @@
                             const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
                             children.forEach((child, cidx) => {
                                 const childId = child.ID || `child_${nodeId}_${cidx}`;
-                                const childLabel = child.objective_name || `子节点 ${cidx + 1}`;
+                                const childLabel = child.objective_name || child.plan_name || `子节点 ${cidx + 1}`;
                                 nodes.add({
                                     id: childId,
                                     label: childLabel,
