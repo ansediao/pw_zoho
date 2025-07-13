@@ -841,7 +841,7 @@
                                 // 如果不是根节点且有子节点，显示下钻按钮
                                 if (!isRootNode && hasChildren) {
                                     menuContent += `
-                                        <div style="padding: 5px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="drillDownToNode('${nodeId}'); this.parentNode.parentNode.remove();">
+                                        <div id="drillDownBtn_${nodeId}" style="padding: 5px; cursor: pointer; border-bottom: 1px solid #eee;">
                                             🔍 下钻查看
                                         </div>
                                     `;
@@ -885,12 +885,21 @@
                                 // 获取动态创建的元素并添加事件监听器
                                 const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
                                 const nextButton = menu.querySelector('#nextButton');
+                                const drillDownBtn = menu.querySelector(`#drillDownBtn_${nodeId}`);
 
                                 // 初始设置 href，传入当前节点的 ID
                                 updateNextButtonHref(nodeId);
 
                                 // 添加事件监听器，传入当前节点的 ID
                                 nodeTypeSelect.addEventListener('change', () => updateNextButtonHref(nodeId));
+                                
+                                // 为下钻按钮添加事件监听器
+                                if (drillDownBtn) {
+                                    drillDownBtn.addEventListener('click', () => {
+                                        drillDownToNode(nodeId);
+                                        menu.remove();
+                                    });
+                                }
 
                                 // 点击菜单外部时隐藏菜单
                                 document.addEventListener('click', function hideMenu(event) {
