@@ -274,14 +274,11 @@
                 // --- 执行区 ---
                 async function fetchAllData() {
                     console.log('开始逐个获取报表数据...');
-                    
                     const allData = {};
-                    
                     // 逐个获取每个报表的数据
                     for (let i = 0; i < report_names.length; i++) {
                         const report_name = report_names[i];
                         console.log(`📊 正在获取报表: ${report_name} (${i + 1}/${report_names.length})`);
-                        
                         try {
                             const config = {
                                 app_name: app_name,
@@ -289,9 +286,7 @@
                             };
                             // 打印参数
                             console.log('获取报表数据的参数:', config);
-
                             const result = await ZOHO.CREATOR.DATA.getRecords(config);
-                            
                             // 报表数据存入对象之前先判断是否为空
                             let reportData = [];
                             if (result && typeof result === 'object') {
@@ -308,16 +303,12 @@
                             } else {
                                 console.warn(`⚠️ 报表 ${report_name} 的结果对象无效:`, result);
                             }
-                            
                             // 存入数据对象
                             allData[report_name] = reportData;
-                            
                         } catch (error) {
                             console.log(`🔍 报表 ${report_name} 获取出错:`, error);
-                            
                             // 检查是否是"无记录"错误
                             let isNoRecordsError = false;
-                            
                             if (error.responseText) {
                                 try {
                                     const errorData = JSON.parse(error.responseText);
@@ -328,7 +319,6 @@
                                     // 解析失败，继续其他检查
                                 }
                             }
-                            
                             if (isNoRecordsError) {
                                 console.log(`📋 报表 ${report_name} 暂无记录，设置为空数组`);
                                 allData[report_name] = [];
@@ -338,8 +328,20 @@
                             }
                         }
                     }
-                    
-                    console.log('📦 所有报表数据获取完毕:', allData);
+
+                    // 自动生成 Joint_Report
+                    const jointReport = [];
+                    for (const reportName of report_names) {
+                        const items = allData[reportName] || [];
+                        for (const item of items) {
+                            // 克隆对象，避免污染原数据
+                            const newItem = Object.assign({}, item);
+                            newItem.Node_Type = reportName.replace('_Report', '');
+                            jointReport.push(newItem);
+                        }
+                    }
+                    allData['Joint_Report'] = jointReport;
+                    console.log('📦 所有报表数据获取完毕（含 Joint_Report ）:', allData);
                     return allData;
                 }
 
