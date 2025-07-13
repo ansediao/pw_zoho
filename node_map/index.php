@@ -277,19 +277,43 @@
                                 const result = await ZOHO.CREATOR.DATA.getRecords(config);
                                 return { success: true, data: result, reportName: report_name };
                             } catch (error) {
+                                // 添加详细的错误调试信息
+                                console.log(`🔍 调试 - 报表 ${report_name} 错误详情:`, error);
+                                console.log(`🔍 错误类型:`, typeof error);
+                                console.log(`🔍 错误属性:`, Object.keys(error));
+                                
                                 // 处理特定的错误情况
+                                let isNoRecordsError = false;
+                                
+                                // 检查多种可能的错误格式
                                 if (error.responseText) {
                                     try {
                                         const errorData = JSON.parse(error.responseText);
+                                        console.log(`🔍 解析的错误数据:`, errorData);
                                         if (errorData.code === 9220) {
-                                            // 报表无记录的情况，这是正常的
-                                            console.log(`📋 报表 ${report_name} 暂无记录`);
-                                            return { success: true, data: { data: [] }, reportName: report_name };
+                                            isNoRecordsError = true;
                                         }
                                     } catch (parseError) {
                                         console.warn(`解析错误响应失败:`, parseError);
                                     }
                                 }
+                                
+                                // 检查错误消息中是否包含"No records exist"
+                                if (error.message && error.message.includes('No records exist')) {
+                                    isNoRecordsError = true;
+                                }
+                                
+                                // 检查状态码
+                                if (error.status === 400 && error.statusText === 'error') {
+                                    isNoRecordsError = true;
+                                }
+                                
+                                if (isNoRecordsError) {
+                                    // 报表无记录的情况，这是正常的
+                                    console.log(`📋 报表 ${report_name} 暂无记录 (已处理)`);
+                                    return { success: true, data: { data: [] }, reportName: report_name };
+                                }
+                                
                                 // 其他错误情况
                                 console.error(`❌ 获取报表 ${report_name} 数据失败:`, error);
                                 return { success: false, error: error, reportName: report_name };
