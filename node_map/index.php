@@ -402,40 +402,15 @@
                         console.log(`🔍 找到 ${rootNodes.length} 个根节点:`, rootNodes);
 
                         // 2. 递归绘制所有节点及其子节点
-                        // 分列布局递归绘制
-                        // 计算节点的列和行
-                        let layoutMap = {};
-                        let maxCol = 1;
-                        function parseTime(str) {
-                            // 支持 "13-Jul-2025 01:55:33" 格式
-                            if (!str) return 0;
-                            const parts = str.split(/[- :]/);
-                            if (parts.length < 6) return 0;
-                            const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-                            return new Date(
-                                parseInt(parts[2]),
-                                months[parts[1]],
-                                parseInt(parts[0]),
-                                parseInt(parts[3]),
-                                parseInt(parts[4]),
-                                parseInt(parts[5])
-                            ).getTime();
-                        }
-
-                        function drawNodeAndChildren(item, col = 1, parentId = null) {
+                        function drawNodeAndChildren(item, nodeColor = '#6aa84f', parentId = null) {
                             const nodeId = item.ID || `node_${Math.random().toString(36).slice(2)}`;
                             const nodeLabel = item.objective_name || item.plan_name || item.name || item.title || item.theme_name || `节点`;
-                            // 记录布局信息
-                            if (!layoutMap[nodeId]) {
-                                layoutMap[nodeId] = {col: col, item: item};
-                                if (col > maxCol) maxCol = col;
-                            }
-                            // 添加节点
+                            // 避免重复添加节点
                             if (!nodes.get(nodeId)) {
                                 nodes.add({
                                     id: nodeId,
                                     label: nodeLabel,
-                                    color: col === 1 ? '#f87171' : (col === 2 ? '#60a5fa' : '#34d399'),
+                                    color: nodeColor,
                                     title: `ID: ${nodeId}\n类型: ${item.Node_Type || ''}\n主题: ${item.theme_name || ''}\n状态: ${item.status || ''}`
                                 });
                             }
@@ -443,46 +418,15 @@
                                 edges.add({from: parentId, to: nodeId, arrows: 'to'});
                             }
                             // 查找 Joint_Report 中 Father_Node_ID 等于当前节点 ID 的子节点
-                            let children = jointReport.filter(child => child.Father_Node_ID == nodeId);
-                            // 按 Create_Time 升序排列
-                            children = children.sort((a, b) => parseTime(a.Create_Time) - parseTime(b.Create_Time));
+                            const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
                             children.forEach(child => {
-                                drawNodeAndChildren(child, col + 1, nodeId);
+                                drawNodeAndChildren(child, '#3b82f6', nodeId);
                             });
                         }
 
-                        // 根节点按 Create_Time 排序
-                        rootNodes = rootNodes.sort((a, b) => parseTime(a.Create_Time) - parseTime(b.Create_Time));
                         rootNodes.forEach((item) => {
-                            drawNodeAndChildren(item, 1, null);
+                            drawNodeAndChildren(item, '#6aa84f', null);
                         });
-
-                        // 计算每列的节点数，分配 y 坐标
-                        let colMap = {};
-                        Object.keys(layoutMap).forEach(nodeId => {
-                            const col = layoutMap[nodeId].col;
-                            if (!colMap[col]) colMap[col] = [];
-                            colMap[col].push(nodeId);
-                        });
-                        // 每列按 Create_Time 排序
-                        for (let c = 1; c <= maxCol; c++) {
-                            if (colMap[c]) {
-                                colMap[c] = colMap[c].sort((a, b) => {
-                                    const ta = parseTime(layoutMap[a].item.Create_Time);
-                                    const tb = parseTime(layoutMap[b].item.Create_Time);
-                                    return ta - tb;
-                                });
-                            }
-                        }
-                        // 设置节点位置
-                        const xStep = 250, yStep = 100;
-                        for (let c = 1; c <= maxCol; c++) {
-                            if (colMap[c]) {
-                                colMap[c].forEach((nodeId, idx) => {
-                                    nodes.update({id: nodeId, x: c * xStep, y: (idx + 1) * yStep});
-                                });
-                            }
-                        }
 
                         // 如果没有根节点，创建一个默认节点
                         if (rootNodes.length === 0) {
