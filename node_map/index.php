@@ -424,15 +424,24 @@
                         return text.substring(0, maxLength) + '...';
                     }
 
-                    // 获取节点颜色
-                    function getNodeColor(level) {
-                        const colors = [
-                            { border: '#e74c3c', background: '#fadbd8' }, // 红色 - 第1层 (根节点)
-                            { border: '#3498db', background: '#d6eaf8' }, // 蓝色 - 第2层 (直接子节点)
-                            { border: '#2ecc71', background: '#d5f4e6' }, // 绿色 - 第3层
-                        ];
-
-                        return colors[Math.min(level, colors.length - 1)];
+                    // 获取节点颜色 - 根据层级和节点类型
+                    function getNodeColor(level, nodeType) {
+                        // 根节点颜色保持不变
+                        if (level === 0) {
+                            return { border: '#e74c3c', background: '#fadbd8' }; // 红色 - 根节点
+                        }
+                        
+                        // 根据 Node_Type 设置颜色
+                        const typeColors = {
+                            'Goals': { border: '#3498db', background: '#d6eaf8' },     // 蓝色 - 目标
+                            'Plans': { border: '#2ecc71', background: '#d5f4e6' },     // 绿色 - 计划
+                            'Plan_Nodes': { border: '#f39c12', background: '#fdeaa7' }, // 橙色 - 计划节点
+                            'Tasks': { border: '#9b59b6', background: '#e8daef' },     // 紫色 - 任务
+                            'Issues': { border: '#e67e22', background: '#fadbd8' },    // 橙红色 - 问题
+                            'default': { border: '#95a5a6', background: '#ecf0f1' }   // 灰色 - 默认
+                        };
+                        
+                        return typeColors[nodeType] || typeColors['default'];
                     }
 
                     // 初始化网络图函数 - 使用行列布局
@@ -558,7 +567,7 @@
                                     x: level * columnWidth, // X坐标按层级 (列)
                                     y: yPosition, // Y坐标：第一个子节点与父节点同高，其他依次向下
                                     fixed: { x: true, y: true }, // 固定位置
-                                    color: getNodeColor(level),
+                                    color: getNodeColor(level, node.original.Node_Type),
                                     font: { size: 14, color: '#333' },
                                     borderWidth: 2,
                                     margin: 10,
