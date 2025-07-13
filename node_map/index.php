@@ -453,6 +453,48 @@
 
                         // 获取 Joint_Report 数据
                         const jointReport = window.allData && window.allData['Joint_Report'] ? window.allData['Joint_Report'] : [];
+                        
+                        // 数据验证函数 - 检查多父节点问题
+                        function validateJointReportData(data) {
+                            console.log("=== Joint Report 数据验证 ===");
+                            const nodeParentCount = new Map();
+                            const multiParentNodes = [];
+                            
+                            data.forEach(item => {
+                                const nodeId = item.ID;
+                                const parentId = item.Father_Node_ID;
+                                
+                                if (parentId && parentId !== "") {
+                                    if (nodeParentCount.has(nodeId)) {
+                                        const existingParents = nodeParentCount.get(nodeId);
+                                        existingParents.push(parentId);
+                                        if (existingParents.length === 2) {
+                                            multiParentNodes.push({
+                                                nodeId: nodeId,
+                                                parents: existingParents,
+                                                nodeName: item.objective_name || item.plan_name || item.plan_node_name || '未命名'
+                                            });
+                                        }
+                                    } else {
+                                        nodeParentCount.set(nodeId, [parentId]);
+                                    }
+                                }
+                            });
+                            
+                            if (multiParentNodes.length > 0) {
+                                console.warn(`⚠️ 发现 ${multiParentNodes.length} 个节点有多个父节点:`);
+                                multiParentNodes.forEach(node => {
+                                    console.warn(`  - 节点 ${node.nodeId} (${node.nodeName}) 的父节点: ${node.parents.join(', ')}`);
+                                });
+                            } else {
+                                console.log("✅ 所有节点都只有一个父节点");
+                            }
+                            
+                            return multiParentNodes;
+                        }
+                        
+                        // 验证数据
+                        const multiParentNodes = validateJointReportData(jointReport);
 
                         // 1. 找到根节点（主题）
                         let rootNodes = [];
@@ -589,35 +631,51 @@
                             });
                         });
 
-                        // 5. 创建vis边 - 确保每个节点只有一个父节点
+                        // 5. 创建vis边 - 修复多父节点问题
                         const visEdges = [];
-                        const processedNodes = new Set(); // 记录已处理的节点，避免重复边
+                        const nodeParentMap = new Map(); // 记录每个节点的唯一父节点
                         
+                        // 第一步：为每个节点确定唯一的父节点
                         levels.forEach(levelNodes => {
                             levelNodes.forEach(node => {
-                                // 只有当节点有父节点且未被处理过时才创建边
-                                if (node.father_id !== null && 
-                                    nodeMap.has(node.father_id) && 
-                                    !processedNodes.has(node.id)) {
-                                    
-                                    const parentInView = visNodes.some(vn => vn.id === node.father_id);
-                                    if (parentInView) {
-                                        visEdges.push({
-                                            from: node.father_id,
-                                            to: node.id,
-                                            arrows: { to: { enabled: true, scaleFactor: 1 } },
-                                            color: '#7f8c8d',
-                                            width: 2,
-                                        });
+                                if (node.father_id !== null && nodeMap.has(node.father_id)) {
+                                    // 如果节点还没有父节点，直接设置
+                                    if (!nodeParentMap.has(node.id)) {
+                                        nodeParentMap.set(node.id, node.father_id);
+                                        console.log(`📌 为节点 ${node.id} 设置父节点: ${node.father_id}`);
+                                    } else {
+                                        // 如果节点已有父节点，选择层级更小的（更接近根节点）
+                                        const existingParent = nodeParentMap.get(node.id);
+                                        const existingParentNode = nodeMap.get(existingParent);
+                                        const currentParentNode = nodeMap.get(node.father_id);
                                         
-                                        // 标记该节点已处理，防止重复创建边
-                                        processedNodes.add(node.id);
-                                        console.log(`✅ 创建边: ${node.father_id} → ${node.id}`);
+                                        if (currentParentNode && existingParentNode && 
+                                            currentParentNode.level < existingParentNode.level) {
+                                            nodeParentMap.set(node.id, node.father_id);
+                                            console.log(`🔄 为节点 ${node.id} 更新父节点: ${existingParent} → ${node.father_id} (选择更高层级)`);
+                                        } else {
+                                            console.warn(`⚠️ 节点 ${node.id} 已有父节点 ${existingParent}，忽略额外的父节点 ${node.father_id}`);
+                                        }
                                     }
-                                } else if (processedNodes.has(node.id)) {
-                                    console.warn(`⚠️ 节点 ${node.id} 已有父节点，跳过重复边创建`);
                                 }
                             });
+                        });
+                        
+                        // 第二步：根据确定的唯一父子关系创建边
+                        nodeParentMap.forEach((parentId, nodeId) => {
+                            const parentInView = visNodes.some(vn => vn.id === parentId);
+                            const nodeInView = visNodes.some(vn => vn.id === nodeId);
+                            
+                            if (parentInView && nodeInView) {
+                                visEdges.push({
+                                    from: parentId,
+                                    to: nodeId,
+                                    arrows: { to: { enabled: true, scaleFactor: 1 } },
+                                    color: '#7f8c8d',
+                                    width: 2,
+                                });
+                                console.log(`✅ 创建边: ${parentId} → ${nodeId}`);
+                            }
                         });
 
                         // 6. 添加到网络
