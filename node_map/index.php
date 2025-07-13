@@ -654,6 +654,22 @@
                             if (nodeId) {
                                 console.log(`🎯 右键点击节点 ID: ${nodeId}`);
                                 
+                                // 查找当前节点的数据，获取 Node_Type
+                                const currentNode = allNodes.find(node => node.id === nodeId);
+                                const nodeType = currentNode ? currentNode.original.Node_Type : null;
+                                console.log(`📋 节点类型: ${nodeType}`);
+                                
+                                // 根据节点类型构建选项
+                                let selectOptions = `
+                                    <option value="purpose">目的</option>                               
+                                    <option value="plan">计划</option>
+                                `;
+                                
+                                // 只有当节点类型为 Plans 时才显示"计划节点"选项
+                                if (nodeType === 'Plans') {
+                                    selectOptions = `<option value="plan_node">计划节点</option>`;
+                                }
+                                
                                 // 如果点击的是节点，显示自定义菜单
                                 const menu = document.createElement('div');
                                 menu.style.position = 'absolute';
@@ -666,9 +682,7 @@
                                 menu.innerHTML = `
                                     <div style="padding-bottom: 5px;">
                                         <select id="nodeTypeSelect">
-                                            <option value="purpose">目的</option>                               
-                                            <option value="plan">计划</option>
-                                            <option value="plan_node">计划节点</option>
+                                            ${selectOptions}
                                         </select>
                                     </div>
                                     <button onclick="this.parentNode.remove();">
