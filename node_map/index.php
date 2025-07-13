@@ -267,7 +267,8 @@
                 // 定义所有需要获取数据的报表名称
                 const report_names = [
                     'Goals_Report',
-                    'Plans_Report'
+                    'Plans_Report',
+                    'Plan_Nodes_Report'
 
                 ];
 
@@ -472,7 +473,7 @@
                             const nodeId = item.ID || `node_${Math.random().toString(36).slice(2)}`;
                             const nodeData = {
                                 id: nodeId,
-                                name: item.objective_name || item.plan_name || item.name || item.title || item.theme_name || `节点`,
+                                name: item.objective_name || item.plan_name || item.plan_node_name || item.title || item.theme_name || `节点`,
                                 father_id: parentId,
                                 create_time: item.Create_Time || item.created_time || item.date_created || '01-Jan-1970 00:00:00',
                                 level: level,
