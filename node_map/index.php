@@ -520,16 +520,35 @@
                         const columnWidth = 300; // 列间距
                         const rowHeight = 100;   // 行间距
                         
+                        // 创建节点位置映射，用于确保子节点不高于父节点
+                        const nodePositions = new Map();
+                        
                         levels.forEach((levelNodes, level) => {
                             levelNodes.forEach((node, index) => {
                                 let yPosition;
+                                
                                 if (level === 0) {
                                     // 根节点固定在第一行 (y = 0)
                                     yPosition = 0;
                                 } else {
-                                    // 其他层级从上往下排列，早的在上面
-                                    yPosition = index * rowHeight;
+                                    // 找到父节点的位置
+                                    const parentPosition = nodePositions.get(node.father_id);
+                                    if (parentPosition !== undefined) {
+                                        if (index === 0) {
+                                            // 第一个子节点与父节点同高
+                                            yPosition = parentPosition;
+                                        } else {
+                                            // 后续子节点依次向下排列
+                                            yPosition = parentPosition + index * rowHeight;
+                                        }
+                                    } else {
+                                        // 如果找不到父节点，使用默认位置
+                                        yPosition = index * rowHeight;
+                                    }
                                 }
+                                
+                                // 记录当前节点的位置
+                                nodePositions.set(node.id, yPosition);
                                 
                                 visNodes.push({
                                     id: node.id,
@@ -537,7 +556,7 @@
                                     title: `${node.name}\n创建时间: ${node.create_time}\n类型: ${node.original.Node_Type || ''}\n状态: ${node.original.status || ''}`,
                                     level: level,
                                     x: level * columnWidth, // X坐标按层级 (列)
-                                    y: yPosition, // Y坐标：根节点在第一行，其他按create_time排序
+                                    y: yPosition, // Y坐标：第一个子节点与父节点同高，其他依次向下
                                     fixed: { x: true, y: true }, // 固定位置
                                     color: getNodeColor(level),
                                     font: { size: 14, color: '#333' },
