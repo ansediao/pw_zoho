@@ -346,7 +346,9 @@
                 }
 
                 // 调用主函数来执行
-                fetchAllData();
+                fetchAllData().then(function(allData) {
+                    window.allData = allData;
+                });
 
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
@@ -386,129 +388,138 @@
                         const nodes = new vis.DataSet([]);
                         const edges = new vis.DataSet([]);
 
-                        // 获取 Joint_Report 数据（异步获取）
-                        fetchAllData().then(allData => {
-                            const jointReport = allData['Joint_Report'] || [];
-                            // 先找根节点（主题）
-                            let rootItems = [];
-                            if (jointReport.length > 0) {
-                                rootItems = jointReport.filter(item => item.theme_name === selectedTheme && (!item.Father_Node_ID || item.Father_Node_ID === '' || item.Father_Node_ID == null));
-                            }
-                            // 没有根节点时，创建默认节点
-                            if (rootItems.length === 0) {
+                        // 获取 Joint_Report 数据（异步函数外部无法直接拿到 fetchAllData 的返回值，这里用 window.allData 作为全局变量存储）
+                        const jointReport = window.allData && window.allData['Joint_Report'] ? window.allData['Joint_Report'] : [];
+
+                        // 1. 找到根节点（主题）
+                        let rootNodes = [];
+                        if (response.data && Array.isArray(response.data)) {
+                            rootNodes = response.data.filter(item => {
+                                return item && item.theme_name === selectedTheme && 
+                                       (item.status === '已完成' || item.status === '进行中');
+                            });
+                        }
+                        console.log(`🔍 找到 ${rootNodes.length} 个根节点:`, rootNodes);
+
+                        // 2. 绘制根节点及其子节点
+                        rootNodes.forEach((item, index) => {
+                            const nodeId = item.ID || `node_${index}`;
+                            const nodeLabel = item.name || item.title || item.theme_name || `节点 ${index + 1}`;
+                            nodes.add({
+                                id: nodeId,
+                                label: nodeLabel,
+                                color: '#6aa84f',
+                                title: `ID: ${nodeId}\n主题: ${item.theme_name || '未知'}\n状态: ${item.status || '未知'}`
+                            });
+                            // 查找 Joint_Report 中 Father_Node_ID 等于根节点 ID 的子节点
+                            const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
+                            children.forEach((child, cidx) => {
+                                const childId = child.ID || `child_${nodeId}_${cidx}`;
+                                const childLabel = child.name || child.title || child.theme_name || `子节点 ${cidx + 1}`;
                                 nodes.add({
-                                    id: selectedTheme,
-                                    label: selectedTheme,
-                                    color: '#6aa84f',
-                                    title: '默认主题节点'
+                                    id: childId,
+                                    label: childLabel,
+                                    color: '#3b82f6',
+                                    title: `ID: ${childId}\n类型: ${child.Node_Type || ''}\n状态: ${child.status || ''}`
                                 });
-                                console.log(`📊 创建默认节点: ${selectedTheme}`);
-                            } else {
-                                // 递归添加所有节点
-                                rootItems.forEach((item, idx) => {
-                                    addNodeRecursive(item, jointReport, nodes, edges);
-                                });
-                            }
-
-                            const data = {
-                                nodes: nodes,
-                                edges: edges
-                            };
-
-                            const options = {
-                                nodes: {
-                                    shape: 'box',
-                                    size: 20,
-                                    font: {
-                                        size: 14,
-                                        color: '#ffffff'
-                                    },
-                                    borderWidth: 2,
-                                    shadow: true
-                                },
-                                edges: {
-                                    width: 2,
-                                    shadow: true
-                                },
-                                physics: {
-                                    enabled: true,
-                                    stabilization: {
-                                        iterations: 2000
-                                    }
-                                },
-                                interaction: {
-                                    navigationButtons: true,
-                                    keyboard: true
-                                }
-                            };
-
-                            const network = new vis.Network(container, data, options);
-
-                            network.on("oncontext", function(params) {
-                                params.event.preventDefault(); // 阻止默认的浏览器右键菜单
-                                const nodeId = network.getNodeAt(params.pointer.DOM);
-                                if (nodeId) {
-                                    console.log(`🎯 右键点击节点 ID: ${nodeId}`);
-                                    // 如果点击的是节点，显示自定义菜单
-                                    const menu = document.createElement('div');
-                                    menu.style.position = 'absolute';
-                                    menu.style.top = `${params.event.clientY}px`;
-                                    menu.style.left = `${params.event.clientX}px`;
-                                    menu.style.backgroundColor = 'white';
-                                    menu.style.border = '1px solid #ccc';
-                                    menu.style.padding = '5px';
-                                    menu.style.zIndex = '1000';
-                                    menu.innerHTML = `
-                                        <div style="padding-bottom: 5px;">
-                                            <select id="nodeTypeSelect">
-                                                <option value="purpose">目的</option>                               
-                                                <option value="plan">计划</option>
-                                                <option value="plan_node">计划节点</option>
-                                            </select>
-                                        </div>
-                                        <button onclick="this.parentNode.remove();">
-                                            <a id="nextButton" href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">下一步</a>
-                                        </button>
-                                    `;
-                                    document.body.appendChild(menu);
-                                    // 获取动态创建的元素并添加事件监听器
-                                    const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
-                                    const nextButton = menu.querySelector('#nextButton');
-                                    // 初始设置 href，传入当前节点的 ID
-                                    updateNextButtonHref(nodeId);
-                                    // 添加事件监听器，传入当前节点的 ID
-                                    nodeTypeSelect.addEventListener('change', () => updateNextButtonHref(nodeId));
-                                    // 点击菜单外部时隐藏菜单
-                                    document.addEventListener('click', function hideMenu(event) {
-                                        if (!menu.contains(event.target)) {
-                                            menu.remove();
-                                            document.removeEventListener('click', hideMenu);
-                                        }
-                                    });
-                                }
+                                edges.add({from: nodeId, to: childId, arrows: 'to'});
+                                console.log(`📊 创建子节点 - ID: ${childId}, 父: ${nodeId}, 标签: ${childLabel}`);
                             });
                         });
 
-                        // 递归添加节点和边
-                        function addNodeRecursive(item, jointReport, nodes, edges, parentId = null) {
-                            const nodeId = item.ID || item.id || (item.name || item.title || item.theme_name);
-                            if (!nodes.get(nodeId)) {
-                                nodes.add({
-                                    id: nodeId,
-                                    label: item.name || item.title || item.theme_name || `节点`,
-                                    color: '#6aa84f',
-                                    title: `ID: ${nodeId}\n类型: ${item.Node_Type || ''}\n主题: ${item.theme_name || ''}\n状态: ${item.status || ''}`
+                        // 如果没有根节点，创建一个默认节点
+                        if (rootNodes.length === 0) {
+                            nodes.add({
+                                id: selectedTheme,
+                                label: selectedTheme,
+                                color: '#6aa84f',
+                                title: '默认主题节点'
+                            });
+                            console.log(`📊 创建默认节点: ${selectedTheme}`);
+                        }
+
+                        const data = {
+                            nodes: nodes,
+                            edges: edges
+                        };
+
+                        const options = {
+                            nodes: {
+                                shape: 'box',
+                                size: 20,
+                                font: {
+                                    size: 14,
+                                    color: '#ffffff'
+                                },
+                                borderWidth: 2,
+                                shadow: true
+                            },
+                            edges: {
+                                width: 2,
+                                shadow: true
+                            },
+                            physics: {
+                                enabled: true,
+                                stabilization: {
+                                    iterations: 2000
+                                }
+                            },
+                            interaction: {
+                                navigationButtons: true,
+                                keyboard: true
+                            }
+                        };
+
+                        const network = new vis.Network(container, data, options);
+
+                        network.on("oncontext", function(params) {
+                            params.event.preventDefault(); // 阻止默认的浏览器右键菜单
+                            const nodeId = network.getNodeAt(params.pointer.DOM);
+                            if (nodeId) {
+                                console.log(`🎯 右键点击节点 ID: ${nodeId}`);
+                                
+                                // 如果点击的是节点，显示自定义菜单
+                                const menu = document.createElement('div');
+                                menu.style.position = 'absolute';
+                                menu.style.top = `${params.event.clientY}px`;
+                                menu.style.left = `${params.event.clientX}px`;
+                                menu.style.backgroundColor = 'white';
+                                menu.style.border = '1px solid #ccc';
+                                menu.style.padding = '5px';
+                                menu.style.zIndex = '1000';
+                                menu.innerHTML = `
+                                    <div style="padding-bottom: 5px;">
+                                        <select id="nodeTypeSelect">
+                                            <option value="purpose">目的</option>                               
+                                            <option value="plan">计划</option>
+                                            <option value="plan_node">计划节点</option>
+                                        </select>
+                                    </div>
+                                    <button onclick="this.parentNode.remove();">
+                                        <a id="nextButton" href="https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:form2?zc_LoadIn=dialog" target="_top" style="display: block; padding: 5px; text-decoration: none; color: black;">下一步</a>
+                                    </button>
+                                `;
+                                document.body.appendChild(menu);
+
+                                // 获取动态创建的元素并添加事件监听器
+                                const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
+                                const nextButton = menu.querySelector('#nextButton');
+
+                                // 初始设置 href，传入当前节点的 ID
+                                updateNextButtonHref(nodeId);
+
+                                // 添加事件监听器，传入当前节点的 ID
+                                nodeTypeSelect.addEventListener('change', () => updateNextButtonHref(nodeId));
+
+                                // 点击菜单外部时隐藏菜单
+                                document.addEventListener('click', function hideMenu(event) {
+                                    if (!menu.contains(event.target)) {
+                                        menu.remove();
+                                        document.removeEventListener('click', hideMenu);
+                                    }
                                 });
                             }
-                            if (parentId) {
-                                edges.add({ from: parentId, to: nodeId, arrows: 'to' });
-                            }
-                            // 查找所有子节点
-                            const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
-                            children.forEach(child => {
-                                addNodeRecursive(child, jointReport, nodes, edges, nodeId);
-                            });
-                        }
+                        });
                     }
 
                     console.log('Filtered Themes:', filteredThemes);
