@@ -277,7 +277,9 @@
                                 app_name: app_name,
                                 report_name: report_name,
                             };
-                            
+                            // 打印参数
+                            console.log('获取报表数据的参数:', config);
+
                             const result = await ZOHO.CREATOR.DATA.getRecords(config);
                             
                             // 报表数据存入对象之前先判断是否为空
