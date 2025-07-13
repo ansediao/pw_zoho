@@ -415,7 +415,7 @@
                             const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
                             children.forEach((child, cidx) => {
                                 const childId = child.ID || `child_${nodeId}_${cidx}`;
-                                const childLabel = child.name || child.title || child.theme_name || `子节点 ${cidx + 1}`;
+                                const childLabel = child.objective_name || `子节点 ${cidx + 1}`;
                                 nodes.add({
                                     id: childId,
                                     label: childLabel,
