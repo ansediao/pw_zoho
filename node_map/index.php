@@ -401,30 +401,31 @@
                         }
                         console.log(`🔍 找到 ${rootNodes.length} 个根节点:`, rootNodes);
 
-                        // 2. 绘制根节点及其子节点
-                        rootNodes.forEach((item, index) => {
-                            const nodeId = item.ID || `node_${index}`;
-                            const nodeLabel = item.objective_name || item.plan_name|| `节点 ${index + 1}`;
-                            nodes.add({
-                                id: nodeId,
-                                label: nodeLabel,
-                                color: '#6aa84f',
-                                title: `ID: ${nodeId}\n主题: ${item.theme_name || '未知'}\n状态: ${item.status || '未知'}`
-                            });
-                            // 查找 Joint_Report 中 Father_Node_ID 等于根节点 ID 的子节点
-                            const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
-                            children.forEach((child, cidx) => {
-                                const childId = child.ID || `child_${nodeId}_${cidx}`;
-                                const childLabel = child.objective_name || child.plan_name || `子节点 ${cidx + 1}`;
+                        // 2. 递归绘制所有节点及其子节点
+                        function drawNodeAndChildren(item, nodeColor = '#6aa84f', parentId = null) {
+                            const nodeId = item.ID || `node_${Math.random().toString(36).slice(2)}`;
+                            const nodeLabel = item.objective_name || item.plan_name || item.name || item.title || item.theme_name || `节点`;
+                            // 避免重复添加节点
+                            if (!nodes.get(nodeId)) {
                                 nodes.add({
-                                    id: childId,
-                                    label: childLabel,
-                                    color: '#3b82f6',
-                                    title: `ID: ${childId}\n类型: ${child.Node_Type || ''}\n状态: ${child.status || ''}`
+                                    id: nodeId,
+                                    label: nodeLabel,
+                                    color: nodeColor,
+                                    title: `ID: ${nodeId}\n类型: ${item.Node_Type || ''}\n主题: ${item.theme_name || ''}\n状态: ${item.status || ''}`
                                 });
-                                edges.add({from: nodeId, to: childId, arrows: 'to'});
-                                console.log(`📊 创建子节点 - ID: ${childId}, 父: ${nodeId}, 标签: ${childLabel}`);
+                            }
+                            if (parentId) {
+                                edges.add({from: parentId, to: nodeId, arrows: 'to'});
+                            }
+                            // 查找 Joint_Report 中 Father_Node_ID 等于当前节点 ID 的子节点
+                            const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
+                            children.forEach(child => {
+                                drawNodeAndChildren(child, '#3b82f6', nodeId);
                             });
+                        }
+
+                        rootNodes.forEach((item) => {
+                            drawNodeAndChildren(item, '#6aa84f', null);
                         });
 
                         // 如果没有根节点，创建一个默认节点
