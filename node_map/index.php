@@ -191,7 +191,7 @@
 
     <script>
         // 全局函数定义
-        function updateNextButtonHref() {
+        function updateNextButtonHref(nodeId = null) {
             const selectedValue = nodeTypeSelect.value;
             let newHref = "https://creatorapp.zoho.com.cn/zoho_f.pwj/-demo#Form:";
             switch (selectedValue) {
@@ -207,8 +207,18 @@
                 default:
                     newHref += "Goals"; // 默认值
             }
+            
+            // 添加基础参数
             newHref += "?zc_LoadIn=dialog";
+            
+            // 如果有 nodeId，添加 Father_Node_ID 参数
+            if (nodeId !== null && nodeId !== undefined) {
+                newHref += `&Father_Node_ID=${encodeURIComponent(nodeId)}`;
+                console.log(`🔗 添加 Father_Node_ID 参数: ${nodeId}`);
+            }
+            
             nextButton.href = newHref;
+            console.log(`🔗 更新后的链接: ${newHref}`);
         }
 
 
@@ -374,12 +384,50 @@
                         const nodes = new vis.DataSet([]);
                         const edges = new vis.DataSet([]);
 
-                        // 添加选定的主题作为节点
-                        nodes.add({
-                            id: selectedTheme,
-                            label: selectedTheme,
-                            color: '#6aa84f'
-                        });
+                        // 从 response.data 中筛选匹配的数据项，使用 item.ID 作为节点 ID
+                        if (response.data && Array.isArray(response.data)) {
+                            const matchingItems = response.data.filter(item => {
+                                return item && item.theme_name === selectedTheme && 
+                                       (item.status === '已完成' || item.status === '进行中');
+                            });
+
+                            console.log(`🔍 找到 ${matchingItems.length} 个匹配的数据项:`, matchingItems);
+
+                            // 为每个匹配的数据项创建节点，使用 item.ID 作为节点 ID
+                            matchingItems.forEach((item, index) => {
+                                const nodeId = item.ID || `node_${index}`; // 使用 item.ID 作为节点 ID
+                                const nodeLabel = item.name || item.title || item.theme_name || `节点 ${index + 1}`;
+                                
+                                nodes.add({
+                                    id: nodeId,
+                                    label: nodeLabel,
+                                    color: '#6aa84f',
+                                    title: `ID: ${nodeId}\n主题: ${item.theme_name || '未知'}\n状态: ${item.status || '未知'}` // 悬停提示
+                                });
+
+                                console.log(`📊 创建节点 - ID: ${nodeId}, 标签: ${nodeLabel}`);
+                            });
+
+                            // 如果没有找到匹配项，创建一个默认节点
+                            if (matchingItems.length === 0) {
+                                nodes.add({
+                                    id: selectedTheme,
+                                    label: selectedTheme,
+                                    color: '#6aa84f',
+                                    title: '默认主题节点'
+                                });
+                                console.log(`📊 创建默认节点: ${selectedTheme}`);
+                            }
+                        } else {
+                            // 如果没有数据，创建默认节点
+                            nodes.add({
+                                id: selectedTheme,
+                                label: selectedTheme,
+                                color: '#6aa84f',
+                                title: '默认主题节点'
+                            });
+                            console.log(`📊 创建默认节点 (无数据): ${selectedTheme}`);
+                        }
 
                         const data = {
                             nodes: nodes,
@@ -419,6 +467,8 @@
                             params.event.preventDefault(); // 阻止默认的浏览器右键菜单
                             const nodeId = network.getNodeAt(params.pointer.DOM);
                             if (nodeId) {
+                                console.log(`🎯 右键点击节点 ID: ${nodeId}`);
+                                
                                 // 如果点击的是节点，显示自定义菜单
                                 const menu = document.createElement('div');
                                 menu.style.position = 'absolute';
@@ -446,11 +496,11 @@
                                 const nodeTypeSelect = menu.querySelector('#nodeTypeSelect');
                                 const nextButton = menu.querySelector('#nextButton');
 
-                                // 初始设置 href
-                                updateNextButtonHref();
+                                // 初始设置 href，传入当前节点的 ID
+                                updateNextButtonHref(nodeId);
 
-                                // 添加事件监听器
-                                nodeTypeSelect.addEventListener('change', updateNextButtonHref);
+                                // 添加事件监听器，传入当前节点的 ID
+                                nodeTypeSelect.addEventListener('change', () => updateNextButtonHref(nodeId));
 
                                 // 点击菜单外部时隐藏菜单
                                 document.addEventListener('click', function hideMenu(event) {
