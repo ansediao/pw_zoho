@@ -404,7 +404,7 @@
                         // 2. 绘制根节点及其子节点
                         rootNodes.forEach((item, index) => {
                             const nodeId = item.ID || `node_${index}`;
-                            const nodeLabel = item.name || item.title || item.theme_name || `节点 ${index + 1}`;
+                            const nodeLabel = item.objective_name || `节点 ${index + 1}`;
                             nodes.add({
                                 id: nodeId,
                                 label: nodeLabel,
