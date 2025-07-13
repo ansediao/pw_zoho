@@ -386,57 +386,29 @@
                         const nodes = new vis.DataSet([]);
                         const edges = new vis.DataSet([]);
 
-                        // 获取 Joint_Report 数据（异步）
+                        // 获取 Joint_Report 数据（异步获取）
                         fetchAllData().then(allData => {
                             const jointReport = allData['Joint_Report'] || [];
-
-                            // 1. 找到根节点（主题节点）
-                            // 先用 selectedTheme 作为根节点 label，找 Joint_Report 中 theme_name === selectedTheme 的第一个节点为根
-                            let rootNode = jointReport.find(item => item.theme_name === selectedTheme);
-                            let rootId, rootLabel;
-                            if (rootNode) {
-                                rootId = rootNode.ID || rootNode.id || rootNode.name || selectedTheme;
-                                rootLabel = rootNode.name || rootNode.title || rootNode.theme_name || selectedTheme;
+                            // 先找根节点（主题）
+                            let rootItems = [];
+                            if (jointReport.length > 0) {
+                                rootItems = jointReport.filter(item => item.theme_name === selectedTheme && (!item.Father_Node_ID || item.Father_Node_ID === '' || item.Father_Node_ID == null));
+                            }
+                            // 没有根节点时，创建默认节点
+                            if (rootItems.length === 0) {
+                                nodes.add({
+                                    id: selectedTheme,
+                                    label: selectedTheme,
+                                    color: '#6aa84f',
+                                    title: '默认主题节点'
+                                });
+                                console.log(`📊 创建默认节点: ${selectedTheme}`);
                             } else {
-                                // 没有找到则用 selectedTheme 作为根
-                                rootId = selectedTheme;
-                                rootLabel = selectedTheme;
-                            }
-                            nodes.add({
-                                id: rootId,
-                                label: rootLabel,
-                                color: '#6aa84f',
-                                title: '根节点: ' + rootLabel
-                            });
-
-                            // 递归添加子节点
-                            function addChildren(parentId) {
-                                // 找到所有 Father_Node_ID === parentId 的节点
-                                const children = jointReport.filter(item => {
-                                    // 支持 ID、id 字段
-                                    return item.Father_Node_ID == parentId;
-                                });
-                                children.forEach(child => {
-                                    const childId = child.ID || child.id || child.name;
-                                    const childLabel = child.name || child.title || child.theme_name || childId;
-                                    // 避免重复添加
-                                    if (!nodes.get(childId)) {
-                                        nodes.add({
-                                            id: childId,
-                                            label: childLabel,
-                                            color: '#4b5563',
-                                            title: `ID: ${childId}\n类型: ${child.Node_Type || ''}`
-                                        });
-                                    }
-                                    // 添加边
-                                    if (!edges.get({filter: e => e.from === parentId && e.to === childId}).length) {
-                                        edges.add({from: parentId, to: childId, arrows: 'to'});
-                                    }
-                                    // 递归
-                                    addChildren(childId);
+                                // 递归添加所有节点
+                                rootItems.forEach((item, idx) => {
+                                    addNodeRecursive(item, jointReport, nodes, edges);
                                 });
                             }
-                            addChildren(rootId);
 
                             const data = {
                                 nodes: nodes,
@@ -516,6 +488,27 @@
                                 }
                             });
                         });
+
+                        // 递归添加节点和边
+                        function addNodeRecursive(item, jointReport, nodes, edges, parentId = null) {
+                            const nodeId = item.ID || item.id || (item.name || item.title || item.theme_name);
+                            if (!nodes.get(nodeId)) {
+                                nodes.add({
+                                    id: nodeId,
+                                    label: item.name || item.title || item.theme_name || `节点`,
+                                    color: '#6aa84f',
+                                    title: `ID: ${nodeId}\n类型: ${item.Node_Type || ''}\n主题: ${item.theme_name || ''}\n状态: ${item.status || ''}`
+                                });
+                            }
+                            if (parentId) {
+                                edges.add({ from: parentId, to: nodeId, arrows: 'to' });
+                            }
+                            // 查找所有子节点
+                            const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
+                            children.forEach(child => {
+                                addNodeRecursive(child, jointReport, nodes, edges, nodeId);
+                            });
+                        }
                     }
 
                     console.log('Filtered Themes:', filteredThemes);
