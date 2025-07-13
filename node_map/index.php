@@ -467,10 +467,18 @@
                         // 2. 构建层级数据结构
                         const allNodes = [];
                         const nodeMap = new Map();
+                        const processedNodeIds = new Set(); // 记录已处理的节点ID，避免重复处理
 
                         // 收集所有节点数据
                         function collectNodes(item, level = 0, parentId = null) {
                             const nodeId = item.ID || `node_${Math.random().toString(36).slice(2)}`;
+                            
+                            // 如果节点已经被处理过，跳过（避免一个节点有多个父节点）
+                            if (processedNodeIds.has(nodeId)) {
+                                console.warn(`⚠️ 节点 ${nodeId} 已存在，跳过重复处理（避免多父节点）`);
+                                return;
+                            }
+                            
                             const nodeData = {
                                 id: nodeId,
                                 name: item.objective_name || item.plan_name || item.plan_node_name || item.title || item.theme_name || `节点`,
@@ -482,6 +490,9 @@
                             
                             allNodes.push(nodeData);
                             nodeMap.set(nodeId, nodeData);
+                            processedNodeIds.add(nodeId); // 标记为已处理
+                            
+                            console.log(`✅ 处理节点: ${nodeId} (父节点: ${parentId || '无'}, 层级: ${level})`);
 
                             // 查找子节点
                             const children = jointReport.filter(child => child.Father_Node_ID == nodeId);
@@ -578,11 +589,17 @@
                             });
                         });
 
-                        // 5. 创建vis边
+                        // 5. 创建vis边 - 确保每个节点只有一个父节点
                         const visEdges = [];
+                        const processedNodes = new Set(); // 记录已处理的节点，避免重复边
+                        
                         levels.forEach(levelNodes => {
                             levelNodes.forEach(node => {
-                                if (node.father_id !== null && nodeMap.has(node.father_id)) {
+                                // 只有当节点有父节点且未被处理过时才创建边
+                                if (node.father_id !== null && 
+                                    nodeMap.has(node.father_id) && 
+                                    !processedNodes.has(node.id)) {
+                                    
                                     const parentInView = visNodes.some(vn => vn.id === node.father_id);
                                     if (parentInView) {
                                         visEdges.push({
@@ -592,7 +609,13 @@
                                             color: '#7f8c8d',
                                             width: 2,
                                         });
+                                        
+                                        // 标记该节点已处理，防止重复创建边
+                                        processedNodes.add(node.id);
+                                        console.log(`✅ 创建边: ${node.father_id} → ${node.id}`);
                                     }
+                                } else if (processedNodes.has(node.id)) {
+                                    console.warn(`⚠️ 节点 ${node.id} 已有父节点，跳过重复边创建`);
                                 }
                             });
                         });
