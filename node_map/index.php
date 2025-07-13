@@ -762,6 +762,12 @@
                                 const nodeType = currentNode ? currentNode.original.Node_Type : null;
                                 console.log(`📋 节点类型: ${nodeType}`);
                                 
+                                // 如果是 Plan_Nodes 节点，不显示右键菜单
+                                if (nodeType === 'Plan_Nodes') {
+                                    console.log(`🚫 Plan_Nodes 节点不显示右键菜单`);
+                                    return;
+                                }
+                                
                                 // 根据节点类型构建选项
                                 let selectOptions = `
                                     <option value="purpose">目的</option>                               
