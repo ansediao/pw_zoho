@@ -256,7 +256,8 @@
 
                 // 定义所有需要获取数据的报表名称
                 const report_names = [
-                    'Goals_Report'
+                    'Goals_Report',
+                    'Plans_Report'
 
                 ];
 
@@ -285,7 +286,30 @@
                         report_names.forEach((name, index) => {
                             // results 数组中的顺序与 report_names 中的顺序是一致的
                             // 我们将每个报表的数据存入 allData 对象，以报表名为键 (key)
-                            allData[name] = results[index].data || [];
+                            
+                            // 报表数据存入对象之前先判断是否为空
+                            const result = results[index];
+                            let reportData = [];
+                            
+                            // 检查结果对象是否存在且有效
+                            if (result && typeof result === 'object') {
+                                // 检查 data 属性是否存在且为数组
+                                if (result.data && Array.isArray(result.data)) {
+                                    reportData = result.data;
+                                    console.log(`报表 ${name} 数据有效，包含 ${reportData.length} 条记录`);
+                                } else if (result.data) {
+                                    // 如果 data 存在但不是数组，尝试转换
+                                    console.warn(`报表 ${name} 的数据不是数组格式，尝试转换:`, result.data);
+                                    reportData = Array.isArray(result.data) ? result.data : [result.data];
+                                } else {
+                                    console.warn(`报表 ${name} 的 data 属性为空或不存在`);
+                                }
+                            } else {
+                                console.warn(`报表 ${name} 的结果对象无效:`, result);
+                            }
+                            
+                            // 最终赋值，确保始终是数组
+                            allData[name] = reportData;
                         });
 
                         // 4. 打印最终组装好的数据对象
@@ -309,9 +333,24 @@
                 if (response.code === 3000 && response.data) {
                     const themeSelect = document.getElementById('themeSelect');
 
-                    const filteredThemes = response.data
-                        .filter(item => item.status === '已完成' || item.status === '进行中')
-                        .map(item => item.theme_name);
+                    // 报表数据处理前先判断是否为空
+                    let filteredThemes = [];
+                    if (response.data && Array.isArray(response.data)) {
+                        filteredThemes = response.data
+                            .filter(item => {
+                                // 确保 item 存在且有 status 属性
+                                return item && item.status && 
+                                       (item.status === '已完成' || item.status === '进行中');
+                            })
+                            .map(item => {
+                                // 确保 theme_name 存在且不为空
+                                return item.theme_name || '未命名主题';
+                            })
+                            .filter(themeName => themeName && themeName.trim() !== ''); // 过滤空字符串
+                        console.log(`主题数据处理完成，共 ${filteredThemes.length} 个有效主题`);
+                    } else {
+                        console.warn('响应数据不是有效的数组格式:', response.data);
+                    }
 
                     // 添加 themeSelect 的 change 事件监听器
                     themeSelect.addEventListener('change', function() {
