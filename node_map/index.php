@@ -569,13 +569,34 @@
                             }
                         });
 
-                        // 对每层的节点按创建时间排序
-                        levels.forEach(levelNodes => {
-                            levelNodes.sort((a, b) => {
-                                const timeA = parseCustomDate(a.create_time);
-                                const timeB = parseCustomDate(b.create_time);
-                                return timeA - timeB; // 早的在前面
-                            });
+                        // 对每层的节点按父级排名优先排序
+                        levels.forEach((levelNodes, level) => {
+                            if (level === 0) {
+                                // 根节点按创建时间排序
+                                levelNodes.sort((a, b) => {
+                                    const timeA = parseCustomDate(a.create_time);
+                                    const timeB = parseCustomDate(b.create_time);
+                                    return timeA - timeB; // 早的在前面
+                                });
+                            } else {
+                                // 子节点按父级排名优先排序
+                                levelNodes.sort((a, b) => {
+                                    // 获取父节点在上一层的排序位置
+                                    const parentLevelNodes = levels.get(level - 1) || [];
+                                    const parentIndexA = parentLevelNodes.findIndex(p => p.id === a.father_id);
+                                    const parentIndexB = parentLevelNodes.findIndex(p => p.id === b.father_id);
+                                    
+                                    // 如果父节点不同，按父节点的排序位置排序
+                                    if (parentIndexA !== parentIndexB) {
+                                        return parentIndexA - parentIndexB;
+                                    }
+                                    
+                                    // 如果是同一个父节点的子节点，按创建时间排序
+                                    const timeA = parseCustomDate(a.create_time);
+                                    const timeB = parseCustomDate(b.create_time);
+                                    return timeA - timeB;
+                                });
+                            }
                         });
 
                         // 4. 创建vis节点 - 行列布局
